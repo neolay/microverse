@@ -640,6 +640,7 @@ function startWorld(appParameters, world) {
         tps: 30,
         eventRateLimit: 60,
         options: {world},
+        step: "manual",
         // developer can override defaults
         ...appParameters,
         // except for the 'microverse' flag
@@ -657,7 +658,11 @@ function startWorld(appParameters, world) {
             return loadInitialBehaviors(Constants.UserBehaviorModules, Constants.UserBehaviorDirectory);
         }).then(() => {
             return StartWorldcore(sessionParameters);
-        }).then(() => {
+        }).then((session) => {
+            function xrAnimFrame(time, _xrFrame) {
+                session.step(time);
+            }
+            session.view.renderer.xr.session.setAnimationLoop(xrAnimFrame);
             let {baseurl} = basenames();
             return fetch(`${baseurl}meta/version.txt`);
         }).then((response) => {
@@ -674,8 +679,6 @@ https://croquet.io`.trim());
 }
 
 export function startMicroverse() {
-    let searchParams = new URL(window.location.href).searchParams;
-
     let setButtons = (display) => {
         ["usersComeHereBttn", "homeBttn", "worldMenuBttn"].forEach((n) => {
             let bttn = document.querySelector("#" + n);

@@ -19,6 +19,7 @@ import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUti
 import { FontLoader, Font } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { VRButton } from 'three/addons/webxr/VRButton.js';
 
 import { PM_Visible, PM_Camera, RenderManager } from "@croquet/worldcore-kernel";
 
@@ -197,6 +198,9 @@ class ThreeRenderManager extends RenderManager {
 
         this.renderer = new THREE.WebGLRenderer(options);
         this.renderer.shadowMap.enabled = true;
+
+        document.body.appendChild(VRButton.createButton(this.renderer));
+        this.renderer.xr.enabled = true;
 
         this.composer = new EffectComposer( this.renderer );
 
