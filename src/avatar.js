@@ -807,6 +807,9 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
             }
         }
         addShellListener(this.shellListener);
+
+        this.shellListener("frameType", {frameType: "primary"});
+        
         // initialize actor
         // the fact that we're creating an AvatarPawn rather than a RemoteAvatarPawn
         // means that this pawn is for the local user.  it will either be for the

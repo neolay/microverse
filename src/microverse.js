@@ -660,9 +660,25 @@ function startWorld(appParameters, world) {
             return StartWorldcore(sessionParameters);
         }).then((session) => {
             function xrAnimFrame(time, _xrFrame) {
+                console.log("xrAnimFrame");
                 session.step(time);
             }
-            session.view.renderer.xr.session.setAnimationLoop(xrAnimFrame);
+
+            let renderer = session.view.service("ThreeRenderManager");
+            renderer.renderer.setAnimationLoop(xrAnimFrame);
+            function animFrame(time) {
+                let renderer = session.view.service("ThreeRenderManager");
+                let xr = renderer.renderer.xr;
+                if (xr.isPresenting) {debugger;}
+                if (xr && xr.getSession()) {
+                    console.log("setting xrAnimFrame");
+                    renderer.setAnimationLoop(xrAnimFrame);
+                } else {
+                    session.step(time);
+                }
+                requestAnimationFrame(animFrame);
+            }
+            requestAnimationFrame(animFrame);
             let {baseurl} = basenames();
             return fetch(`${baseurl}meta/version.txt`);
         }).then((response) => {
@@ -688,22 +704,14 @@ export function startMicroverse() {
         });
     };
 
-    sendToShell("hud", {joystick: false, fullscreen: false});
-    setButtons("none");
-
-    const configPromise = new Promise(resolve => resolveConfiguration = resolve)
-        .then(localConfig => {
-            window.settingsMenuConfiguration = { ...localConfig };
-            return !localConfig.showSettings || localConfig.userHasSet
-                ? false // as if user has run dialog with no changes
-                : new Promise(resolve => startSettingsMenu(true, resolve));
-        });
-    sendToShell("send-configuration");
+    window.settingsMenuConfiguration = {
+        version: "1",
+        nickname: "t",
+    };
+    const configPromise = Promise.resolve(false);
 
     return configPromise.then(changed => {
         if (changed) sendToShell("update-configuration", { localConfig: window.settingsMenuConfiguration });
-        sendToShell("hud", {joystick: true, fullscreen: true});
-        setButtons("flex");
         launchMicroverse();
     });
 }
