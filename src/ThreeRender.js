@@ -175,6 +175,65 @@ const PM_ThreeCamera = superclass => class extends PM_Camera(superclass) {
 };
 
 //------------------------------------------------------------------------------------------
+//-- XRController --------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
+
+class XRController {
+    constructor(manager) {
+        this.manager = manager;
+        this.controllerModelFactory = new XRControllerModelFactory();
+
+        function selectStart() {
+	    this.userData.isSelecting = true;
+        }
+
+        function selectEnd() {
+            this.userData.isSelecting = false;
+        }
+
+        [0, 1].forEach((i) => {
+            let n = `controller${i}`;
+            this[n] = manager.renderer.xr.getController(i);
+            let c = this[n];
+            c.addEventListener("selectstart", selectStart);
+            c.addEventListener("selectend", selectEnd);
+            c.addEventListener("connected", (event) => {
+                c.add(this.buildController(event.data));
+            });
+            c.addEventListener("disconnected", () => {
+                this.remove(this.children[0]);
+            });
+            manager.scene.add(c);
+
+	    let gn = `controllerGrip${i}`;
+            this[gn] = manager.renderer.xr.getControllerGrip(i);
+            let g = this[gn];
+	    g.add(this.controllerModelFactory.createControllerModel(g));
+	    manager.scene.add(g);
+        });
+    }
+
+    buildController(data) {
+        let geometry;
+        let material;
+
+        switch (data.targetRayMode) {
+            case 'tracked-pointer':
+                geometry = new THREE.BufferGeometry();
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, - 1 ], 3));
+                geometry.setAttribute('color', new THREE.Float32BufferAttribute([0.5, 0.5, 0.5, 0, 0, 0], 3));
+                material = new THREE.LineBasicMaterial({vertexColors: true, blending: THREE.AdditiveBlending});
+                return new THREE.Line(geometry, material);
+            case 'gaze':
+                geometry = new THREE.RingGeometry(0.02, 0.04, 32).translate(0, 0, -1);
+                material = new THREE.MeshBasicMaterial({opacity: 0.5, transparent: true});
+                return new THREE.Mesh(geometry, material);
+        }
+    }
+}
+
+
+//------------------------------------------------------------------------------------------
 //-- ThreeRenderManager --------------------------------------------------------------------
 //------------------------------------------------------------------------------------------
 
@@ -204,36 +263,7 @@ class ThreeRenderManager extends RenderManager {
             if (xr) {
                 document.body.appendChild(VRButton.createButton(this.renderer));
                 this.renderer.xr.enabled = true;
-                this.controllerModelFactory = new XRControllerModelFactory();
-
-                function selectStart() {
-		    this.userData.isSelecting = true;
-                }
-
-                function selectEnd() {
-                    this.userData.isSelecting = false;
-                }
-
-                [0, 1].forEach((i) => {
-                    let n = `controller${i}`;
-                    this[n] = this.renderer.xr.getController(i);
-                    let c = this[n];
-                    c.addEventListener("selectstart", selectStart);
-                    c.addEventListener("selectend", selectEnd);
-                    c.addEventListener("connected", (event) => {
-                        c.add(this.buildController(event.data));
-                    });
-                    c.addEventListener("disconnected", () => {
-                        this.remove(this.children[0]);
-                    });
-                    this.scene.add(c);
-
-		    let gn = `controllerGrip${i}`;
-                    this[gn] = this.renderer.xr.getControllerGrip(i);
-                    let g = this[gn];
-		    g.add(this.controllerModelFactory.createControllerModel(g));
-		    this.scene.add(g);
-                });
+                this.xrController = new XRController(this);
             } else {
                 // at this moment, there is no effects added but this is where it will go.
                 this.composer = new EffectComposer( this.renderer );
@@ -244,24 +274,6 @@ class ThreeRenderManager extends RenderManager {
             this.subscribe("input", "resize", () => this.resize());
             this.setRender(true);
         });
-    }
-
-    buildController(data) {
-        let geometry;
-        let material;
-
-        switch (data.targetRayMode) {
-            case 'tracked-pointer':
-                geometry = new THREE.BufferGeometry();
-                geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, - 1 ], 3));
-                geometry.setAttribute('color', new THREE.Float32BufferAttribute([0.5, 0.5, 0.5, 0, 0, 0], 3));
-                material = new THREE.LineBasicMaterial({vertexColors: true, blending: THREE.AdditiveBlending});
-                return new THREE.Line(geometry, material);
-            case 'gaze':
-                geometry = new THREE.RingGeometry(0.02, 0.04, 32).translate(0, 0, -1);
-                material = new THREE.MeshBasicMaterial({opacity: 0.5, transparent: true});
-                return new THREE.Mesh(geometry, material);
-        }
     }
 
     setRender(bool) {
