@@ -660,14 +660,11 @@ function startWorld(appParameters, world) {
         }).then(() => {
             return StartWorldcore(sessionParameters);
         }).then((session) => {
-            function xrAnimFrame(time, _xrFrame) {
-                session.step(time);
-            }
-
+            let step = (time, _xrFrame) => session.step(time);
             let renderer = session.view.service("ThreeRenderManager");
-            renderer.renderer.setAnimationLoop(xrAnimFrame);
+            renderer.renderer.setAnimationLoop(step);
             function animFrame(time) {
-                session.step(time);
+                step(time);
                 requestAnimationFrame(animFrame);
             }
             requestAnimationFrame(animFrame);
