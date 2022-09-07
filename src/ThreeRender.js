@@ -199,20 +199,33 @@ class ThreeRenderManager extends RenderManager {
         this.renderer = new THREE.WebGLRenderer(options);
         this.renderer.shadowMap.enabled = true;
 
-        document.body.appendChild(VRButton.createButton(this.renderer));
-        this.renderer.xr.enabled = true;
-
-        //this.composer = new EffectComposer( this.renderer );
-
-        // this.renderPass = new RenderPass( this.scene, this.camera );
-        // this.composer.addPass( this.renderPass );
-
-        this.resize();
-        this.subscribe("input", "resize", () => this.resize());
-        this.setRender(true);
+        this.hasXR().then((xr) => {
+            if (xr) {
+                document.body.appendChild(VRButton.createButton(this.renderer));
+                this.renderer.xr.enabled = true;
+            } else {
+                // at this moment, there is no effects added but this is where it will go.
+                this.composer = new EffectComposer( this.renderer );
+                this.renderPass = new RenderPass( this.scene, this.camera );
+                this.composer.addPass( this.renderPass );
+            }
+            this.resize();
+            this.subscribe("input", "resize", () => this.resize());
+            this.setRender(true);
+        });
     }
 
-    setRender(bool){this.doRender = bool; }
+    setRender(bool) {
+        this.doRender = bool;
+    }
+
+    hasXR() {
+        if (navigator.xr) {
+            return navigator.xr.isSessionSupported("immersive-vr");
+        }
+        return Promise.resolve(false);
+    }
+
     destroy() {
         super.destroy();
         this.renderer.dispose();
@@ -223,7 +236,9 @@ class ThreeRenderManager extends RenderManager {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        // this.composer.setSize(window.innerWidth, window.innerHeight)
+        if (this.composer) {
+            this.composer.setSize(window.innerWidth, window.innerHeight)
+        }
     }
 
     dirtyLayer(name) {
@@ -252,9 +267,14 @@ class ThreeRenderManager extends RenderManager {
     }
 
     update() {
-        if(this.doRender)this.renderer.render(this.scene, this.camera);
+        if (this.doRender) {
+            if (this.composer) {
+                this.composer.render();
+            } else {
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
     }
-
 }
 
 const THREE = {
