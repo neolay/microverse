@@ -202,10 +202,10 @@ class ThreeRenderManager extends RenderManager {
         document.body.appendChild(VRButton.createButton(this.renderer));
         this.renderer.xr.enabled = true;
 
-        this.composer = new EffectComposer( this.renderer );
+        //this.composer = new EffectComposer( this.renderer );
 
-        this.renderPass = new RenderPass( this.scene, this.camera );
-        this.composer.addPass( this.renderPass );
+        // this.renderPass = new RenderPass( this.scene, this.camera );
+        // this.composer.addPass( this.renderPass );
 
         this.resize();
         this.subscribe("input", "resize", () => this.resize());
@@ -223,7 +223,7 @@ class ThreeRenderManager extends RenderManager {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.composer.setSize(window.innerWidth, window.innerHeight)
+        // this.composer.setSize(window.innerWidth, window.innerHeight)
     }
 
     dirtyLayer(name) {
@@ -252,7 +252,7 @@ class ThreeRenderManager extends RenderManager {
     }
 
     update() {
-        if(this.doRender)this.composer.render();
+        if(this.doRender)this.renderer.render(this.scene, this.camera);
     }
 
 }
