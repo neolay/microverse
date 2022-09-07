@@ -10,7 +10,7 @@ function isShellFrame() {
 }
 
 async function start() {
-    if (false) {
+    if (isShellFrame()) {
         const { startShell } = await import("./shell.js");
         startShell();
     } else {
