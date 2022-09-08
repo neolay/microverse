@@ -201,7 +201,7 @@ class XRController {
                 c.add(this.buildController(event.data, i));
             });
             c.addEventListener("disconnected", () => {
-                this.remove(this.children[0]);
+                c.remove(this.children[0]);
             });
             manager.scene.add(c);
 
@@ -220,6 +220,10 @@ class XRController {
 
         if (data.gamepad) {
             this[`gamepad${i}`] = data.gamepad;
+        }
+
+        if (!this.manager.origReferenceSpace) {
+            this.manager.origReferenceSpace = this.manager.renderer.xr.getReferenceSpace();
         }
 
         switch (data.targetRayMode) {
@@ -342,22 +346,18 @@ class ThreeRenderManager extends RenderManager {
             }
         }
 
-        /*
         if (this.xrController) {
-            const PREFIX = "croquet:microverse:";
             let dx = 0;
             let dy = 0;
-
             dx += this.xrController.gamepad0?.axes[2] || 0;
             dx += this.xrController.gamepad1?.axes[2] || 0;
-            dy += this.xrController.gamepad0?.axes[3] || 0;
-            dy += this.xrController.gamepad1?.axes[3] || 0;
+            dy -= this.xrController.gamepad0?.axes[3] || 0;
+            dy -= this.xrController.gamepad1?.axes[3] || 0;
 
             if (this.avatar)  {
                 this.avatar.updateMotion(dx * 50, dy * 50);
             }
         }
-        */
     }
 }
 

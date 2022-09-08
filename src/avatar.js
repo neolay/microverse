@@ -690,6 +690,7 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
         const renderMgr = this.service("ThreeRenderManager");
         this.camera = renderMgr.camera;
         this.scene = renderMgr.scene;
+        renderMgr.avatar = this; // hack
 
         this.lastHeight = EYE_HEIGHT; // tracking the height above ground
         this.yawDirection = -1; // which way the mouse moves the world depends on if we are using WASD or not
@@ -1331,6 +1332,7 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
                         this.lastUpdateTime = time;
                         this.positionTo(vq.v, vq.q);
                     }
+                    this.updateXRReference(this.translation, vq.v);
                 }
                 this.refreshCameraTransform();
 
@@ -1346,6 +1348,18 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
             }
         }
         this.updatePortalRender();
+    }
+
+    updateXRReference(t, v) {
+        let manager = this.service("ThreeRenderManager");
+        if (!manager.origReferenceSpace) {return;}
+        let xr = manager.renderer.xr;
+        let space = xr.getReferenceSpace();
+        let offsetTransform = new XRRigidTransform(
+            {x: v[0] - t[0], y: v[1] - t[1], z: v[2] - t[2]},
+            {x: this.spin[0], y: this.spin[1], z: this.spin[2], w: this.spin[4]});
+        let newSpace = space.getOffsetReferenceSpace(offsetTransform);
+        xr.setReferenceSpace(newSpace);
     }
 
     // compute motion from spin and velocity

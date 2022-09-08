@@ -661,7 +661,10 @@ function startWorld(appParameters, world) {
             return StartWorldcore(sessionParameters);
         }).then((session) => {
             let renderer = session.view.service("ThreeRenderManager");
-            let step = (time, _xrFrame) => session.step(time);
+            let step = (time, xrFrame) => {
+                renderer.xrFrame = xrFrame;
+                session.step(time);
+            };
             renderer.renderer.setAnimationLoop(step);
             let {baseurl} = basenames();
             return fetch(`${baseurl}meta/version.txt`);
