@@ -198,7 +198,7 @@ class XRController {
             c.addEventListener("selectstart", selectStart);
             c.addEventListener("selectend", selectEnd);
             c.addEventListener("connected", (event) => {
-                c.add(this.buildController(event.data));
+                c.add(this.buildController(event.data, i));
             });
             c.addEventListener("disconnected", () => {
                 this.remove(this.children[0]);
@@ -211,11 +211,16 @@ class XRController {
 	    g.add(this.controllerModelFactory.createControllerModel(g));
 	    manager.scene.add(g);
         });
+
     }
 
-    buildController(data) {
+    buildController(data, i) {
         let geometry;
         let material;
+
+        if (data.gamepad) {
+            this[`gamepad${i}`] = data.gamepad;
+        }
 
         switch (data.targetRayMode) {
             case 'tracked-pointer':
@@ -229,6 +234,7 @@ class XRController {
                 material = new THREE.MeshBasicMaterial({opacity: 0.5, transparent: true});
                 return new THREE.Mesh(geometry, material);
         }
+
     }
 }
 
@@ -335,6 +341,23 @@ class ThreeRenderManager extends RenderManager {
                 this.renderer.render(this.scene, this.camera);
             }
         }
+
+        /*
+        if (this.xrController) {
+            const PREFIX = "croquet:microverse:";
+            let dx = 0;
+            let dy = 0;
+
+            dx += this.xrController.gamepad0?.axes[2] || 0;
+            dx += this.xrController.gamepad1?.axes[2] || 0;
+            dy += this.xrController.gamepad0?.axes[3] || 0;
+            dy += this.xrController.gamepad1?.axes[3] || 0;
+
+            if (this.avatar)  {
+                this.avatar.updateMotion(dx * 50, dy * 50);
+            }
+        }
+        */
     }
 }
 
