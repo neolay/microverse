@@ -105,7 +105,7 @@ const PM_ThreeCamera = superclass => class extends PM_Camera(superclass) {
         render.camera.matrixWorldNeedsUpdate = true;
     }
 
-    setRayCast(xy){
+    setRayCast(xy) {
         const x = ( xy[0] / window.innerWidth ) * 2 - 1;
         const y = - ( xy[1] / window.innerHeight ) * 2 + 1;
         const render = this.service("ThreeRenderManager");
@@ -114,8 +114,19 @@ const PM_ThreeCamera = superclass => class extends PM_Camera(superclass) {
         return this.raycaster;
     }
 
-    pointerRaycast(xy, targets, optStrictTargets) {
-        this.setRayCast(xy);
+    setXRRayCast(xrEvent) {
+        let vec = new THREE.Vector3(0, 0, -1);
+        vec.applyEuler(xrEvent.target.rotation);
+        if (!this.raycaster) this.raycaster = new THREE.Raycaster();
+        this.raycaster.set(xrEvent.target.position, vec);
+    }
+
+    pointerRaycast(source, targets, optStrictTargets) {
+        if (Array.isArray(source)) {
+            this.setRayCast(source);
+        } else {
+            this.setXRRayCast(source);
+        }
         const render = this.service("ThreeRenderManager");
         const h = this.raycaster.intersectObjects(targets || render.threeLayer("pointer"));
         if (h.length === 0) return {};
@@ -183,20 +194,41 @@ class XRController {
         this.manager = manager;
         this.controllerModelFactory = new XRControllerModelFactory();
 
-        function selectStart() {
-	    this.userData.isSelecting = true;
+        this.raycaster = new THREE.Raycaster();
+
+        function selectStart(controller, evt) {
+            if (manager.avatar) {
+                let e = {
+                    button: 0,
+                    buttons: 1,
+                    id: 1,
+                    source: evt,
+                };
+                manager.avatar.doPointerDown(e);
+            }
+            controller.userData.pointerDown = true;
         }
 
-        function selectEnd() {
-            this.userData.isSelecting = false;
+        function selectEnd(controller, evt) {
+            if (manager.avatar) {
+                let e = {
+                    button: 0,
+                    buttons: 1,
+                    id: 1,
+                    source: evt,
+                };
+                manager.avatar.doPointerUp(e);
+            }
+            controller.userData.pointerDown = false;
         }
 
         [0, 1].forEach((i) => {
             let n = `controller${i}`;
             this[n] = manager.renderer.xr.getController(i);
             let c = this[n];
-            c.addEventListener("selectstart", selectStart);
-            c.addEventListener("selectend", selectEnd);
+            c.addEventListener("selectstart", (evt) => selectStart(c, evt));
+            c.addEventListener("selectend", (evt) => selectEnd(c, evt));
+            c.userData.pointerDown = false;
             c.addEventListener("connected", (event) => {
                 c.add(this.buildController(event.data, i));
             });
@@ -259,6 +291,26 @@ class XRController {
             avatar.endMotion();
         }
         this.lastDelta = [dx, dy];
+
+        if (this.controller0.userData.pointerDown) {
+            let e = {
+                button: 0,
+                buttons: 1,
+                id: 1,
+                source: {target: this.controller0}
+            };
+            avatar.doPointerMove(e);
+        }
+
+        if (this.controller1.userData.pointerDown) {
+            let e = {
+                button: 0,
+                buttons: 1,
+                id: 1,
+                source: {target: this.controller1}
+            };
+            avatar.doPointerMove(e);
+        }
     }
 }
 
