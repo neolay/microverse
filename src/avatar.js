@@ -1311,8 +1311,6 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
                 // the v and q variable is passed around to compute a new position.
                 // unless positionTo() is called the avatar state (should) stays the same.
 
-                let thisTranslation = this.translation;
-
                 let vq = this.updatePose(delta);
 
                 let handlerModuleName = this.actor._cardData.avatarEventHandler;
