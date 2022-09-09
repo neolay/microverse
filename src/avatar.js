@@ -2,6 +2,8 @@
 // https://croquet.io
 // info@croquet.io
 
+/* globals XRRigidTransform */
+
 import {
     Data, App, View, mix, GetPawn, AM_Player, PM_Player,
     v3_zero, v3_isZero, v3_add, v3_sub, v3_scale, v3_sqrMag, v3_normalize, v3_rotate, v3_multiply, v3_lerp, v3_transform, v3_magnitude, v3_equals,
@@ -1309,6 +1311,8 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
                 // the v and q variable is passed around to compute a new position.
                 // unless positionTo() is called the avatar state (should) stays the same.
 
+                let thisTranslation = this.translation;
+
                 let vq = this.updatePose(delta);
 
                 let handlerModuleName = this.actor._cardData.avatarEventHandler;
@@ -1332,8 +1336,8 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
                         this.lastUpdateTime = time;
                         this.positionTo(vq.v, vq.q);
                     }
-                    this.updateXRReference(this.translation, vq.v);
                 }
+                this.updateXRReference();
                 this.refreshCameraTransform();
 
                 // this part is copied from CardPawn.update()
@@ -1350,15 +1354,20 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
         this.updatePortalRender();
     }
 
-    updateXRReference(t, v) {
+    updateXRReference() {
         let manager = this.service("ThreeRenderManager");
         if (!manager.origReferenceSpace) {return;}
         let xr = manager.renderer.xr;
-        let space = xr.getReferenceSpace();
+
+        let inv = m4_invert(this.global);
+        let vv = m4_getTranslation(inv);
+        let rr = m4_getRotation(inv);
+
         let offsetTransform = new XRRigidTransform(
-            {x: v[0] - t[0], y: v[1] - t[1], z: v[2] - t[2]},
-            {x: this.spin[0], y: this.spin[1], z: this.spin[2], w: this.spin[4]});
-        let newSpace = space.getOffsetReferenceSpace(offsetTransform);
+            {x: vv[0], y: vv[1], z: vv[2]},
+            {x: rr[0], y: rr[1], z: rr[2], w: rr[3]});
+
+        let newSpace = manager.origReferenceSpace.getOffsetReferenceSpace(offsetTransform);
         xr.setReferenceSpace(newSpace);
     }
 

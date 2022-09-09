@@ -211,7 +211,7 @@ class XRController {
 	    g.add(this.controllerModelFactory.createControllerModel(g));
 	    manager.scene.add(g);
         });
-
+        this.lastDelta = [0, 0];
     }
 
     buildController(data, i) {
@@ -239,6 +239,26 @@ class XRController {
                 return new THREE.Mesh(geometry, material);
         }
 
+    }
+
+    update(avatar) {
+        let dx = 0;
+        let dy = 0;
+        dx += this.gamepad0?.axes[2] || 0;
+        dx += this.gamepad1?.axes[2] || 0;
+        dy += this.gamepad0?.axes[3] || 0;
+        dy += this.gamepad1?.axes[3] || 0;
+
+        if (this.lastDelta[0] === 0 && this.lastDelta[1] === 0 &&
+            dx !== 0 && dy !== 0) {
+            avatar.startMotion();
+        }
+        avatar.updateMotion(dx * 80, dy * 80);
+        if (this.lastDelta[0] !== 0 && this.lastDelta[1] !== 0 &&
+            dx === 0 && dy === 0) {
+            avatar.endMotion();
+        }
+        this.lastDelta = [dx, dy];
     }
 }
 
@@ -346,17 +366,8 @@ class ThreeRenderManager extends RenderManager {
             }
         }
 
-        if (this.xrController) {
-            let dx = 0;
-            let dy = 0;
-            dx += this.xrController.gamepad0?.axes[2] || 0;
-            dx += this.xrController.gamepad1?.axes[2] || 0;
-            dy -= this.xrController.gamepad0?.axes[3] || 0;
-            dy -= this.xrController.gamepad1?.axes[3] || 0;
-
-            if (this.avatar)  {
-                this.avatar.updateMotion(dx * 50, dy * 50);
-            }
+        if (this.xrController && this.avatar) {
+            this.xrController.update(this.avatar);
         }
     }
 }
