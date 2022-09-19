@@ -646,6 +646,24 @@ class RemoteAvatarPawn extends mix(CardPawn).with(PM_Player, PM_ThreeVisible) {
         delete this.lastOpacity;
     }
 
+    setOpacity(opacity) {
+        if (!this.shape) {return;}
+        let handlerModuleName = this.actor._cardData.avatarEventHandler;
+        if (this.has(`${handlerModuleName}$AvatarEventHandlerPawn`, "mapOpacity")) {
+            opacity = this.call(`${handlerModuleName}$AvatarEventHandlerPawn`, "mapOpacity", opacity);
+        }
+        let transparent = opacity !== 1;
+        this.shape.visible = this.actor.inWorld && opacity !== 0;
+        this.shape.traverse(n => {
+            if (n.material) {
+                n.material.opacity = opacity;
+                n.material.transparent = transparent;
+                n.material.side = THREE.DoubleSide;
+                n.material.needsUpdate = true;
+            }
+        });
+    }
+
     removeChild(id) {
         super.removeChild(id);
         delete this.lastOpacity;
@@ -792,22 +810,22 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
                     this.portalCameraUpdate(cameraMatrix);
                     break;
                 case "motion-start":
-                    if (this.has(`${handlerModuleName}$AvatarPawn`, "startMotion")) {
-                        this.call(`${handlerModuleName}$AvatarPawn`, "startMotion", dx, dy);
+                    if (this.has(`${handlerModuleName}$AvatarEventHandlerPawn`, "startMotion")) {
+                        this.call(`${handlerModuleName}$AvatarEventHandlerPawn`, "startMotion", dx, dy);
                     } else {
                         this.startMotion(dx, dy);
                     }
                     break;
                 case "motion-end":
-                    if (this.has(`${handlerModuleName}$AvatarPawn`, "endMotion")) {
-                        this.call(`${handlerModuleName}$AvatarPawn`, "endMotion", dx, dy);
+                    if (this.has(`${handlerModuleName}$AvatarEventHandlerPawn`, "endMotion")) {
+                        this.call(`${handlerModuleName}$AvatarEventHandlerPawn`, "endMotion", dx, dy);
                     } else {
                         this.endMotion(dx, dy);
                     }
                     break;
                 case "motion-update":
-                    if (this.has(`${handlerModuleName}$AvatarPawn`, "updateMotion")) {
-                        this.call(`${handlerModuleName}$AvatarPawn`, "updateMotion", dx, dy);
+                    if (this.has(`${handlerModuleName}$AvatarEventHandlerPawn`, "updateMotion")) {
+                        this.call(`${handlerModuleName}$AvatarEventHandlerPawn`, "updateMotion", dx, dy);
                     } else {
                         this.updateMotion(dx, dy);
                     }
@@ -1145,8 +1163,8 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
     // the camera when walking: based on avatar with 3rd person lookOffset
     walkLook() {
         let handlerModuleName = this.actor._cardData.avatarEventHandler;
-        if (this.has(`${handlerModuleName}$AvatarPawn`, "walkLook")) {
-            return this.call(`${handlerModuleName}$AvatarPawn`, "walkLook");
+        if (this.has(`${handlerModuleName}$AvatarEventHandlerPawn`, "walkLook")) {
+            return this.call(`${handlerModuleName}$AvatarEventHandlerPawn`, "walkLook");
         }
 
         const pitchRotation = q_axisAngle([1,0,0], this.lookPitch);
@@ -1292,7 +1310,7 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
         }
         if (leavingWorld) {
             let handlerModuleName = this.actor._cardData.avatarEventHandler;
-            this.call(`${handlerModuleName}$AvatarPawn`, "endMotion");
+            this.call(`${handlerModuleName}$AvatarEventHandlerPawn`, "endMotion");
         }
         // now actually leave or enter the world (stops presenting in old world)
         console.log(`${frameName()} setting actor`, actorSpec);
@@ -1891,113 +1909,6 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
         let w = window.innerWidth / 2;
         let c = (fov * Math.PI / 180) / h;
         return[c * (xy[0] - w), c * (h - xy[1])];
-    }
-
-    pointerDown(e) {
-        if (e.ctrlKey || e.altKey) { // should be the first responder case
-            const render = this.service("ThreeRenderManager");
-            const rc = this.pointerRaycast(e.xy, render.threeLayerUnion('pointer'));
-            this.targetDistance = rc.distance;
-            let p3e = this.pointerEvent(rc, e);
-            p3e.lookNormal = this.actor.lookNormal;
-            let pawn = GetPawn(p3e.targetId);
-            pawn = pawn || null;
-
-            if (this.editPawn !== pawn) {
-                if (this.editPawn) {
-                    console.log('pointerDown clear old editPawn')
-                    this.editPawn.unselectEdit();
-                    this.editPawn = null;
-                    this.editPointerId = null;
-                }
-                console.log('pointerDown set new editPawn', pawn)
-                if (pawn) {
-                    this.editPawn = pawn;
-                    this.editPointerId = e.id;
-                    this.editPawn.selectEdit();
-                    this.buttonDown = e.button;
-                    if (!p3e.normal) {p3e.normal = this.actor.lookNormal}
-                    this.p3eDown = p3e;
-                }
-            } else {
-                console.log("pointerDown in editMode");
-            }
-        } else {
-            if (!this.focusPawn && e.xy) {
-                // because this case is called as the last responder, facusPawn should be always empty
-                this.dragWorld = this.xy2yp(e.xy);
-                this.lookYaw = q_yaw(this._rotation);
-            }
-            let handlerModuleName = this.actor._cardData.avatarEventHandler;
-            if (this.has(`${handlerModuleName}$AvatarPawn`, "handlingEvent")) {
-                this.call(`${handlerModuleName}$AvatarPawn`, "handlingEvent", "pointerDown", this, e);
-            }
-        }
-    }
-
-    pointerMove(e) {
-        if (this.editPawn) {
-            // a pawn is selected for draggging
-            if (e.id === this.editPointerId) {
-                if (this.buttonDown === 0) {
-                    this.editPawn.dragPlane(this.setRayCast(e.xy), this.p3eDown);
-                }else if (this.buttonDown == 2) {
-                    this.editPawn.rotatePlane(this.setRayCast(e.xy), this.p3eDown);
-                }
-            }
-        }else {
-            // we should add and remove responders dynamically so that we don't have to check things this way
-            if (!this.focusPawn && this.isPointerDown && e.xy) {
-                let yp = this.xy2yp(e.xy);
-                let yaw = (this.lookYaw + (this.dragWorld[0] - yp[0]) * this.yawDirection);
-                let pitch = this.lookPitch + this.dragWorld[1] - yp[1];
-                pitch = pitch > 1 ? 1 : (pitch < -1 ? -1 : pitch);
-                this.dragWorld = yp;
-                this.lookTo(pitch, yaw);
-            }
-        }
-    }
-
-    pointerUp(_e) {
-        if (this.editPawn) {
-            this.editPawn.unselectEdit();
-            this.editPawn = null;
-            this.editPointerId = null;
-            this.p3eDown = null;
-            this.buttonDown = null;
-        }
-
-        // Below is a workaround to support an incomplete user program.
-        // If there are left over first responders (pointer capture) from a user object,
-        // delete them here.
-        if (this.firstResponders) {
-            for (let [_eventType, array] of this.firstResponders) {
-                for (let i = array.length - 1; i >= 0; i--) {
-                    let obj = array[i];
-                    if (obj.pawn !== this) {
-                        array.splice(i, 1);
-                    }
-                }
-            }
-        }
-    }
-
-    pointerTap(_e) {
-        if (this.editPawn) { // this gets set in pointerDown
-            this.editPawn.unselectEdit();
-            this.editPawn.showControls({avatar: this.actor.id,distance: this.targetDistance});
-            this.editPawn = null;
-            this.editPointerId = null;
-        }
-    }
-
-    pointerWheel(e) {
-        let z = this.lookOffset[2];
-        z += Math.max(1,z) * e.deltaY / 1000.0;
-        z = Math.min(100, Math.max(z,0));
-        this.lookOffset = [this.lookOffset[0], z, z];
-        let pitch = (this.lookPitch * 11 + Math.max(-z / 2, -Math.PI / 4)) / 12;
-        this.lookTo(pitch, q_yaw(this._rotation), this.lookOffset); //,
     }
 
     fadeNearby() {

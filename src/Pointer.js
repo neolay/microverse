@@ -412,8 +412,8 @@ export const PM_Pointer = superclass => class extends superclass {
             event = this.pointerEvent(rc, wcEvent);
         }
         let handlerModuleName = this.actor._cardData.avatarEventHandler;
-        if (this.has(`${handlerModuleName}$AvatarPawn`, "handlingEvent")) {
-            this.call(`${handlerModuleName}$AvatarPawn`, "handlingEvent", type, target, event);
+        if (this.has(`${handlerModuleName}$AvatarEventHandlerPawn`, "handlingEvent")) {
+            this.call(`${handlerModuleName}$AvatarEventHandlerPawn`, "handlingEvent", type, target, event);
         }
         if (array) {
             array.forEach((n) => n.listener.call(target, event));
@@ -646,6 +646,7 @@ export const PM_Pointer = superclass => class extends superclass {
         pe.id = wcEvent.id;
         pe.button = wcEvent.button;
         pe.buttons = wcEvent.buttons;
+        pe.ray = rc.ray;
         if (wcEvent.deltaY !== undefined) {
             pe.deltaY = wcEvent.deltaY;
         }
