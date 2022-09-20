@@ -649,8 +649,8 @@ class RemoteAvatarPawn extends mix(CardPawn).with(PM_Player, PM_ThreeVisible) {
     setOpacity(opacity) {
         if (!this.shape) {return;}
         let handlerModuleName = this.actor._cardData.avatarEventHandler;
-        if (this.has(`${handlerModuleName}$AvatarEventHandlerPawn`, "mapOpacity")) {
-            opacity = this.call(`${handlerModuleName}$AvatarEventHandlerPawn`, "mapOpacity", opacity);
+        if (this.has(`${handlerModuleName}$AvatarPawn`, "mapOpacity")) {
+            opacity = this.call(`${handlerModuleName}$AvatarPawn`, "mapOpacity", opacity);
         }
         let transparent = opacity !== 1;
         this.shape.visible = this.actor.inWorld && opacity !== 0;
@@ -810,22 +810,22 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
                     this.portalCameraUpdate(cameraMatrix);
                     break;
                 case "motion-start":
-                    if (this.has(`${handlerModuleName}$AvatarEventHandlerPawn`, "startMotion")) {
-                        this.call(`${handlerModuleName}$AvatarEventHandlerPawn`, "startMotion", dx, dy);
+                    if (this.has(`${handlerModuleName}$AvatarPawn`, "startMotion")) {
+                        this.call(`${handlerModuleName}$AvatarPawn`, "startMotion", dx, dy);
                     } else {
                         this.startMotion(dx, dy);
                     }
                     break;
                 case "motion-end":
-                    if (this.has(`${handlerModuleName}$AvatarEventHandlerPawn`, "endMotion")) {
-                        this.call(`${handlerModuleName}$AvatarEventHandlerPawn`, "endMotion", dx, dy);
+                    if (this.has(`${handlerModuleName}$AvatarPawn`, "endMotion")) {
+                        this.call(`${handlerModuleName}$AvatarPawn`, "endMotion", dx, dy);
                     } else {
                         this.endMotion(dx, dy);
                     }
                     break;
                 case "motion-update":
-                    if (this.has(`${handlerModuleName}$AvatarEventHandlerPawn`, "updateMotion")) {
-                        this.call(`${handlerModuleName}$AvatarEventHandlerPawn`, "updateMotion", dx, dy);
+                    if (this.has(`${handlerModuleName}$AvatarPawn`, "updateMotion")) {
+                        this.call(`${handlerModuleName}$AvatarPawn`, "updateMotion", dx, dy);
                     } else {
                         this.updateMotion(dx, dy);
                     }
@@ -1163,8 +1163,8 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
     // the camera when walking: based on avatar with 3rd person lookOffset
     walkLook() {
         let handlerModuleName = this.actor._cardData.avatarEventHandler;
-        if (this.has(`${handlerModuleName}$AvatarEventHandlerPawn`, "walkLook")) {
-            return this.call(`${handlerModuleName}$AvatarEventHandlerPawn`, "walkLook");
+        if (this.has(`${handlerModuleName}$AvatarPawn`, "walkLook")) {
+            return this.call(`${handlerModuleName}$AvatarPawn`, "walkLook");
         }
 
         const pitchRotation = q_axisAngle([1,0,0], this.lookPitch);
@@ -1310,7 +1310,7 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
         }
         if (leavingWorld) {
             let handlerModuleName = this.actor._cardData.avatarEventHandler;
-            this.call(`${handlerModuleName}$AvatarEventHandlerPawn`, "endMotion");
+            this.call(`${handlerModuleName}$AvatarPawn`, "endMotion");
         }
         // now actually leave or enter the world (stops presenting in old world)
         console.log(`${frameName()} setting actor`, actorSpec);

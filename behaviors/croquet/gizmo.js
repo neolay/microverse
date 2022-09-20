@@ -2,7 +2,7 @@ class GizmoActor {
     setup() {
         console.log("actor", this.parent);
 
-        this.listen("cycleModes", this.cycleModes);
+        this.listen("cycleModes", "cycleModes");
         this.cycleModes();
     }
 
@@ -246,6 +246,8 @@ class GizmoAxisPawn {
             );
 
             console.log("intersectionPoint", intersectionPoint);
+
+            if (!intersectionPoint) {return;}
 
             const delta3D = intersectionPoint
                 .clone()

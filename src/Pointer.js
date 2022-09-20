@@ -227,7 +227,11 @@ export const PM_PointerTarget = superclass => class extends superclass {
     registerEventListener(data) {
         // console.log("registerEventLIstener", data);
         let {eventName} = data;
-        let func = (evt) => this.say("dispatchEvent", {eventName, evt});
+        let func = (evt) => {
+            let newEvt = {...evt};
+            delete newEvt.ray;
+            this.say("dispatchEvent", {eventName, evt: newEvt});
+        };
         this.modelListeners.set(eventName, func);
         this.addEventListener(eventName, func, `dispatch_${eventName}`);
     }
@@ -412,8 +416,8 @@ export const PM_Pointer = superclass => class extends superclass {
             event = this.pointerEvent(rc, wcEvent);
         }
         let handlerModuleName = this.actor._cardData.avatarEventHandler;
-        if (this.has(`${handlerModuleName}$AvatarEventHandlerPawn`, "handlingEvent")) {
-            this.call(`${handlerModuleName}$AvatarEventHandlerPawn`, "handlingEvent", type, target, event);
+        if (this.has(`${handlerModuleName}$AvatarPawn`, "handlingEvent")) {
+            this.call(`${handlerModuleName}$AvatarPawn`, "handlingEvent", type, target, event);
         }
         if (array) {
             array.forEach((n) => n.listener.call(target, event));

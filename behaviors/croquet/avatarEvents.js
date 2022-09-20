@@ -1,9 +1,7 @@
-// import { GetPawn, q_yaw } from "@croquet/worldcore-kernel";
-
-class AvatarEventHandlerActor {
+class AvatarActor {
     setup() {
-        this.listen("addOrCycleGizmo", this.addOrCycleGizmo);
-        this.listen("removeGizmo", this.removeGizmo);
+        this.listen("addOrCycleGizmo", "addOrCycleGizmo");
+        this.listen("removeGizmo", "removeGizmo");
     }
 
     addOrCycleGizmo(target) {
@@ -17,13 +15,13 @@ class AvatarEventHandlerActor {
                 noSave: true,
             });
         } else {
-            this.publish(this.gizmo.id, "cycleModes")
+            this.publish(this.gizmo.id, "cycleModes");
         }
     }
 
     removeGizmo() {
         this.gizmo?.destroy();
-        this.gizmo = undefined;
+        delete this.gizmo;
     }
 
     teardown() {
@@ -32,22 +30,22 @@ class AvatarEventHandlerActor {
     }
 }
 
-class AvatarEventHandlerPawn {
+class AvatarPawn {
     setup() {
         if (!this.isMyPlayerPawn) {return;}
 
         this.addFirstResponder("pointerTap", {ctrlKey: true, altKey: true}, this);
         this.addEventListener("pointerTap", this.pointerTap);
 
-        this.addFirstResponder("pointerDown", {ctrlKey: true, shiftKey:true, altKey: true}, this);
+        this.addFirstResponder("pointerDown", {ctrlKey: true, shiftKey: true, altKey: true}, this);
         this.addLastResponder("pointerDown", {}, this);
         this.addEventListener("pointerDown", this.pointerDown);
 
-        this.addFirstResponder("pointerMove", {ctrlKey: true, shiftKey:true, altKey: true}, this);
+        this.addFirstResponder("pointerMove", {ctrlKey: true, shiftKey: true, altKey: true}, this);
         this.addLastResponder("pointerMove", {}, this);
         this.addEventListener("pointerMove", this.pointerMove);
 
-        this.addLastResponder("pointerUp", {ctrlKey: true, shiftKey:true, altKey: true}, this);
+        this.addLastResponder("pointerUp", {ctrlKey: true, shiftKey: true, altKey: true}, this);
         this.addEventListener("pointerUp", this.pointerUp);
 
         this.addLastResponder("pointerWheel", {ctrlKey: true, altKey: true}, this);
@@ -140,7 +138,7 @@ class AvatarEventHandlerPawn {
                 this.publish(this.actor.id, "removeGizmo");
             }
             let handlerModuleName = this.actor._cardData.avatarEventHandler;
-            this.call(`${handlerModuleName}$AvatarEventHandlerPawn`, "handlingEvent", "pointerDown", this, e);
+            this.call(`${handlerModuleName}$AvatarPawn`, "handlingEvent", "pointerDown", this, e);
             if (!pawnIsGizmo) {
                 this.publish(this.actor.id, "removeGizmo");
             }
@@ -269,8 +267,8 @@ export default {
     modules: [
         {
             name: "AvatarEventHandler",
-            actorBehaviors: [AvatarEventHandlerActor],
-            pawnBehaviors: [AvatarEventHandlerPawn],
+            actorBehaviors: [AvatarActor],
+            pawnBehaviors: [AvatarPawn],
         }
     ]
 }
