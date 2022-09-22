@@ -157,7 +157,6 @@ class GizmoAxisActor {
     }
 
     translateTarget(translation) {
-        console.log("translating target", translation);
         this.parent.parent.set({translation})
     }
 }
@@ -166,11 +165,9 @@ class GizmoAxisPawn {
     setup() {
         this.originalColor = this.actor._cardData.color;
 
-        let isMine = this.getMyAvatar().gizmoTargetPawn == this.parent.parent;
+        let isMine = this.getMyAvatar().gizmoTargetPawn === this.parent.parent;
 
-        console.log("isMine", isMine);
-
-        const gyro = new THREE.Gyroscope({rotationInvariant: true, scaleInvariant: true});
+        const gyro = new Microverse.THREE.Gyroscope({rotationInvariant: true, scaleInvariant: true});
         this.shape.add(gyro);
         gyro.add(
             this.makeAxisHelper(isMine)
@@ -178,7 +175,7 @@ class GizmoAxisPawn {
 
         this.dragStart = undefined;
         this.positionAtDragStart = undefined;
-        this.movementEnabled = false;
+        // this.movementEnabled = false;
 
         if (isMine) {
             this.addEventListener("pointerDown", "startDrag");
@@ -199,80 +196,71 @@ class GizmoAxisPawn {
     }
 
     startDrag(event) {
-        console.log("start on axis", event);
-        const avatar = Microverse.GetPawn(event.avatarId);
+        let avatar = Microverse.GetPawn(event.avatarId);
+        let target = this.actor.parent.parent;
+
         // avatar.addFirstResponder("pointerMove", {shiftKey: true}, this);
         avatar.addFirstResponder("pointerMove", {}, this);
-        this.dragStart = [...event.xyz];
-        this.positionAtDragStart = [...this.actor.parent.parent._translation];
+        let {m4_invert,v3_transform, m4_identity} = Microverse;
+
+        this._parentGlobal = target._parent ? target._parent.global : m4_identity();
+        this._parentInvert = target._parent ? m4_invert(target._parent.global) : m4_identity();
+        this.positionAtDragStart = target.translation;
+        this.dragStart = event.xyz;
+        this.globalStart = v3_transform(target.translation, this._parentGlobal);
+
+        console.log("dragStart", this.positionAtDragStart, this.globalStart);
+
+        // if we are dragging along the Y axis
+        this.intersectionPlane = new Microverse.THREE.Plane();
+
+        console.log(this.actor._cardData.axis);
+        if (this.actor._cardData.axis[0] === 1 || this.actor._cardData.axis[1] === 1) {
+            // intersect with the XY plane
+            this.intersectionPlane.setFromNormalAndCoplanarPoint(
+                new Microverse.THREE.Vector3(0, 0, 1),
+                new Microverse.THREE.Vector3(...this.globalStart)
+            );
+        } else {
+            // intersect with the YZ plane
+            this.intersectionPlane.setFromNormalAndCoplanarPoint(
+                new Microverse.THREE.Vector3(1, 0, 0),
+                new Microverse.THREE.Vector3(...this.globalStart)
+            );
+        }
+        console.log("intersectionPlane", this.intersectionPlane);
     }
 
     drag(event) {
         if (this.dragStart) {
-            console.log("drag on axis", event);
-
-            // if we are dragging along the Y axis
-            let intersectionPlane = new Microverse.THREE.Plane();
-
-            if (
-                this.actor._cardData.axis[0] == 1 ||
-                this.actor._cardData.axis[1] == 1
-            ) {
-                // intersect with the XY plane
-                intersectionPlane.setFromNormalAndCoplanarPoint(
-                    new Microverse.THREE.Vector3(0, 0, 1),
-                    new Microverse.THREE.Vector3(...this.positionAtDragStart)
-                );
-            } else {
-                // intersect with the YZ plane
-                intersectionPlane.setFromNormalAndCoplanarPoint(
-                    new Microverse.THREE.Vector3(1, 0, 0),
-                    new Microverse.THREE.Vector3(...this.positionAtDragStart)
-                );
-            }
-
-            // if (window.planeHelper) {
-            //     this.shape.parent.remove(window.planeHelper);
-            //     window.planeHelper = undefined;
-            // }
-            // window.planeHelper = new Microverse.THREE.PlaneHelper( intersectionPlane, 10, 0xffff00 );
-            // this.shape.parent.add(window.planeHelper);
-
-            console.log(intersectionPlane);
-
-            let intersectionPoint = event.ray.intersectPlane(
-                intersectionPlane,
+            let origin = new Microverse.THREE.Vector3(...event.ray.origin);
+            let direction = new Microverse.THREE.Vector3(...event.ray.direction);
+            let ray = new Microverse.THREE.Ray(origin, direction);
+            let intersectionPoint = ray.intersectPlane(
+                this.intersectionPlane,
                 new Microverse.THREE.Vector3()
             );
 
-            console.log("intersectionPoint", intersectionPoint);
+            // console.log("intersectionPoint", intersectionPoint);
 
             if (!intersectionPoint) {return;}
 
-            const delta3D = intersectionPoint
-                .clone()
-                .sub(new Microverse.THREE.Vector3(...this.dragStart));
+            let globalHere = intersectionPoint.toArray();
+            let globalStart = this.dragStart;
 
-            console.log("delta3D", delta3D);
+            let localHere = Microverse.v3_transform(globalHere, this._parentInvert);
+            let localStart = Microverse.v3_transform(globalStart, this._parentInvert);
+            let delta3D = Microverse.v3_sub(localHere, localStart);
 
-            const nextPosition =
-                this.actor._cardData.axis[0] == 1
-                    ? [
-                          delta3D.x + this.positionAtDragStart[0],
-                          this.positionAtDragStart[1],
-                          this.positionAtDragStart[2],
-                      ]
-                    : this.actor._cardData.axis[1] == 1
-                    ? [
-                          this.positionAtDragStart[0],
-                          delta3D.y + this.positionAtDragStart[1],
-                          this.positionAtDragStart[2],
-                      ]
-                    : [
-                          this.positionAtDragStart[0],
-                          this.positionAtDragStart[1],
-                          delta3D.z + this.positionAtDragStart[2],
-                      ];
+            let nextPosition = [...this.positionAtDragStart];
+            if (this.actor._cardData.axis[0] === 1) {
+                nextPosition[0] += delta3D[0];
+            } else if (this.actor._cardData.axis[1] === 1) {
+                nextPosition[1] += delta3D[1];
+            } else if (this.actor._cardData.axis[2] === 1) {
+                nextPosition[2] += delta3D[2];
+            }
+            // console.log(nextPosition);
             this.publish(this.actor.id, "translateTarget", nextPosition);
             // this.set({translation: nextPosition})
         }
@@ -576,3 +564,5 @@ export default {
         }
     ]
 }
+
+/* globals Microverse */
