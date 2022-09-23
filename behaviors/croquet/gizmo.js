@@ -359,27 +359,24 @@ class GizmoRotorPawn {
         return circle;
     }
 
-    rotationInteractionPlane(event) {
-        let {THREE, m4_getTranslation, v3_sub} = Microverse;
-        let target = this.parent.actor.target;
+    localRotationAxis() {
+        return Microverse.v3_rotate(this.actor._cardData.axis, this.rotationAtDragStart);//wrong
+    }
+
+    rotationInteractionPlane(_event) {
+        let {THREE} = Microverse;
         const interactionPlane = new THREE.Plane();
-        let avatar = Microverse.GetPawn(event.avatarId);
-
-        let globalTranslation = m4_getTranslation(target.global);
-        let direction = v3_sub(globalTranslation, avatar.translation);
-
-        console.log(direction);
 
         interactionPlane.setFromNormalAndCoplanarPoint(
-            new THREE.Vector3(...direction),
-            new THREE.Vector3(...globalTranslation)
-        );
+            new THREE.Vector3(...this.localRotationAxis()),
+            new THREE.Vector3(...this.globalTranslationAtStart));
 
         /*
         if (window.planeHelper) {
             this.shape.parent.remove(window.planeHelper);
+            window.planeHelper = undefined;
         }
-        window.planeHelper = new Microverse.THREE.PlaneHelper(interactionPlane, 10, 0xffff00);
+        window.planeHelper = new Microverse.THREE.PlaneHelper( interactionPlane, 10, 0xffff00 )
         this.shape.parent.add(window.planeHelper);
         return interactionPlane;
         */
@@ -393,32 +390,29 @@ class GizmoRotorPawn {
         // avatar.addFirstResponder("pointerMove", {shiftKey: true}, this);
         avatar.addFirstResponder("pointerMove", {}, this);
 
-        let {THREE, v3_sub, v3_transform, m4_getTranslation, m4_invert, m4_identity} = Microverse;
+        let {THREE, v3_normalize, v3_transform, m4_getTranslation, m4_getRotation, m4_invert, m4_identity} = Microverse;
 
         this._parentGlobal = target._parent ? target._parent.global : m4_identity();
         this._parentInvert = target._parent ? m4_invert(target._parent.global) : m4_identity();
+        this._invert = m4_invert(target.global);
         this.rotationAtDragStart = target.rotation;
         this.globalTranslationAtStart = m4_getTranslation(target.global);
-
-        console.log("dragStart", target.rotation);
+        target._global = null;
+        this.globalRotationAtStart = m4_getRotation(target.global);
 
         let origin = new THREE.Vector3(...event.ray.origin);
         let direction = new THREE.Vector3(...event.ray.direction);
         let ray = new THREE.Ray(origin, direction);
 
-        let closest = new THREE.Vector3();
-        let intersect = new THREE.Vector3();
-        let sphere = new THREE.Sphere(new THREE.Vector3(...this.globalTranslationAtStart), 2);
-        intersect = ray.intersectSphere(sphere, intersect);
-        if (intersect) {
-            closest = intersect.toArray();
-        } else {
-            ray.closestPointToPoint(new THREE.Vector3(...this.globalTranslationAtStart), closest);
-            closest = closest ? closest.toArray() : null;
-        }
+        let dragPoint = ray.intersectPlane(
+            this.rotationInteractionPlane(),
+            new Microverse.THREE.Vector3()
+        );
 
-        if (closest) {
-            this.dragStart = v3_sub(v3_transform(closest, this._parentGlobal), target.translation);
+        if (dragPoint) {
+            let localPoint = v3_transform(dragPoint.toArray(), this._invert);
+            let dir = v3_normalize(localPoint);
+            this.dragStart = dir;
         }
 
         console.log("dragStart", this.dragStart);
@@ -427,42 +421,37 @@ class GizmoRotorPawn {
     drag(event) {
         if (!this.dragStart) {return;}
 
-        let {THREE, v3_transform, v3_normalize, v3_multiply, v3_sub, v3_dot, v3_scale, q_multiply, q_euler, q_axisAngle} = Microverse;
+        let {THREE, v3_transform, v3_normalize, v3_cross, v3_dot, q_multiply, q_axisAngle} = Microverse;
 
-        let target = this.actor.parent.target;
         let origin = new THREE.Vector3(...event.ray.origin);
         let direction = new THREE.Vector3(...event.ray.direction);
         let ray = new THREE.Ray(origin, direction);
 
-        let closest = new THREE.Vector3();
-        let intersect = new THREE.Vector3();
-        let sphere = new THREE.Sphere(new THREE.Vector3(...this.globalTranslationAtStart), 2);
-
         let newDragPoint;
-        intersect = ray.intersectSphere(sphere, intersect);
-        if (intersect) {
-            closest = intersect.toArray();
-        } else {
-            ray.closestPointToPoint(new THREE.Vector3(...this.globalTranslationAtStart), closest);
-            closest = closest ? closest.toArray() : null;
-        }
 
-        if (closest) {
-            newDragPoint = v3_sub(v3_transform(closest, this._parentGlobal), target.translation);
+        let dragPoint = ray.intersectPlane(
+            this.rotationInteractionPlane(),
+            new Microverse.THREE.Vector3()
+        );
+
+        if (dragPoint) {
+            let localPoint = v3_transform(dragPoint.toArray(), this._invert);
+            let dir = v3_normalize(localPoint);
+            newDragPoint = dir;
         }
 
         if (!newDragPoint) {return;}
 
-        let projStartDirection = v3_normalize(v3_multiply(v3_sub([1, 1, 1], this.actor._cardData.axis), this.dragStart));
-        let projNewDirection = v3_normalize(v3_multiply(v3_sub([1, 1, 1], this.actor._cardData.axis), newDragPoint));
+        let projStartDirection = this.dragStart;
+        let projNewDirection = newDragPoint;
+        let normal = this.localRotationAxis();
 
-        let cosT = v3_dot(projStartDirection, projNewDirection) / (1 * 1);
-        let angle = Math.acos(cosT);
+        let angle = Math.atan2(v3_dot(v3_cross(projStartDirection, projNewDirection), normal), v3_dot(projStartDirection, projNewDirection));
 
         let axisAngle = q_axisAngle(this.actor._cardData.axis, angle);
         const nextRotation = q_multiply(axisAngle, this.rotationAtDragStart);
 
-        console.log("rotation around axis", newDragPoint, angle);
+        // console.log("rotation around axis", newDragPoint, angle);
         this.publish(this.parent.actor.id, "rotateTarget", nextRotation)
     }
 
