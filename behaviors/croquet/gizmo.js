@@ -1,9 +1,23 @@
 class GizmoActor {
     setup() {
-        console.log("actor", this.parent);
-
+        console.log("actor", this.parent, this.target);
         this.listen("cycleModes", "cycleModes");
         this.cycleModes();
+        this.subscribe(this.id, "translateTarget", "translateTarget");
+        this.subscribe(this.id, "rotateTarget", "rotateTarget");
+        this.subscribe(this.id, "scaleTarget", "scaleTarget");
+    }
+
+    translateTarget(translation) {
+        this.set({translation});
+    }
+
+    rotateTargetTarget(rotation) {
+        this.set({rotation});
+    }
+
+    scaleTarget(scale) {
+        this.set({scale});
     }
 
     cycleModes() {
@@ -97,13 +111,9 @@ class GizmoActor {
         } else if (this.gizmoMode == "rotate") {
             this.gizmoMode = "scale";
 
-            console.log("before destroy")
-
             this.rotateX.destroy();
             this.rotateY.destroy();
             this.rotateZ.destroy();
-
-            console.log("after destroy")
 
             this.scaleX = this.createCard({
                 translation: [0, 0, 0],
@@ -147,17 +157,20 @@ class GizmoActor {
 
 class GizmoPawn {
     setup() {
-        console.log("pawn", this.parent)
+        console.log("pawn", this.actor.target);
+        [...this.shape.children].forEach((c) => c.removeFromParent());
+        this.gyro = new Microverse.THREE.Gyroscope({rotationInvariant: false, scaleInvariant: true});
+        this.shape.add(this.gyro);
     }
 }
 
 class GizmoAxisActor {
     setup() {
-        this.listen("translateTarget", "translateTarget");
+        this.subscribe(this.parent.id, "translateTarget", "translateTarget");
     }
 
     translateTarget(translation) {
-        this.parent.parent.set({translation})
+        this.parent.target.set({translation});
     }
 }
 
@@ -165,13 +178,14 @@ class GizmoAxisPawn {
     setup() {
         this.originalColor = this.actor._cardData.color;
 
-        let isMine = this.getMyAvatar().gizmoTargetPawn === this.parent.parent;
+        let avatar = this.getMyAvatar();
+        let avatarTargetActor = avatar?.gizmoTargetPawn?.actor;
+        let targetActor = this?.parent?.actor?.target;
+        let isMine = avatarTargetActor === targetActor;
 
-        const gyro = new Microverse.THREE.Gyroscope({rotationInvariant: true, scaleInvariant: true});
+        const gyro = new Microverse.THREE.Gyroscope({rotationInvariant: false, scaleInvariant: true});
         this.shape.add(gyro);
-        gyro.add(
-            this.makeAxisHelper(isMine)
-        );
+        gyro.add(this.makeAxisHelper(isMine));
 
         this.dragStart = undefined;
         this.positionAtDragStart = undefined;
@@ -197,7 +211,7 @@ class GizmoAxisPawn {
 
     startDrag(event) {
         let avatar = Microverse.GetPawn(event.avatarId);
-        let target = this.actor.parent.parent;
+        let target = this.actor.parent.target;
 
         // avatar.addFirstResponder("pointerMove", {shiftKey: true}, this);
         avatar.addFirstResponder("pointerMove", {}, this);
@@ -208,8 +222,6 @@ class GizmoAxisPawn {
         this.positionAtDragStart = target.translation;
         this.dragStart = event.xyz;
         this.globalStart = v3_transform(target.translation, this._parentGlobal);
-
-        console.log("dragStart", this.positionAtDragStart, this.globalStart);
 
         // if we are dragging along the Y axis
         this.intersectionPlane = new Microverse.THREE.Plane();
@@ -261,7 +273,7 @@ class GizmoAxisPawn {
                 nextPosition[2] += delta3D[2];
             }
             // console.log(nextPosition);
-            this.publish(this.actor.id, "translateTarget", nextPosition);
+            this.publish(this.parent.actor.id, "translateTarget", nextPosition);
             // this.set({translation: nextPosition})
         }
     }
@@ -286,7 +298,7 @@ class GizmoAxisPawn {
 
 class GizmoRotorActor {
     setup() {
-        this.listen("rotateTarget", "rotateTarget");
+        this.subscribe(this.parent.id, "rotateTarget", "rotateTarget");
     }
 
     rotateTarget(rotation) {
@@ -298,14 +310,14 @@ class GizmoRotorActor {
 class GizmoRotorPawn {
     setup() {
         this.originalColor = this.actor._cardData.color;
-        const gyro = new THREE.Gyroscope({scaleInvariant: true});
-        let isMine = this.getMyAvatar().gizmoTargetPawn == this.parent.parent;
+        const gyro = new Microverse.THREE.Gyroscope({scaleInvariant: true});
+        let isMine = this.getMyAvatar().gizmoTargetPawn === this.parent.parent;
         this.shape.add(gyro);
         gyro.add(this.createCircle(isMine ? this.actor._cardData.color : 0xffffff, this.actor._cardData.axis));
 
         this.dragStart = undefined;
         this.rotationAtDragStart = undefined;
-        this.movementEnabled = false;
+        // this.movementEnabled = false;
         if (isMine) {
             this.addEventListener("pointerDown", "startDrag");
             this.addEventListener("pointerMove", "drag");
@@ -325,17 +337,15 @@ class GizmoRotorPawn {
         const pts = curve.getSpacedPoints(256);
         const geo = new Microverse.THREE.BufferGeometry().setFromPoints(pts);
 
-        if (axis[1] == 1) {
+        if (axis[1] === 1) {
             geo.rotateX(Math.PI / 2);
-        } else if (axis[0] == 1) {
+        } else if (axis[0] === 1) {
             geo.rotateY(Math.PI / 2);
         }
 
-        console.log(geo);
-
-        const mat = new Microverse.THREE.LineBasicMaterial({ color, toneMapped: false });
+        const mat = new Microverse.THREE.LineBasicMaterial({color, toneMapped: false, linewidth: 2});
         const circle = new Microverse.THREE.LineLoop(geo, mat);
-        return circle
+        return circle;
     }
 
     localRotationAxis() {
@@ -345,55 +355,76 @@ class GizmoRotorPawn {
     rotationInteractionPlane() {
         const interactionPlane = new Microverse.THREE.Plane();
         interactionPlane.setFromNormalAndCoplanarPoint(new Microverse.THREE.Vector3(...this.localRotationAxis()), new Microverse.THREE.Vector3(...this.actor.parent.parent._translation));
-        // if (window.planeHelper) {
-        //     this.shape.parent.remove(window.planeHelper);
-        //     window.planeHelper = undefined;
-        // }
-        // window.planeHelper = new Microverse.THREE.PlaneHelper( interactionPlane, 10, 0xffff00 )
-        // this.shape.parent.add(window.planeHelper);
+        if (window.planeHelper) {
+            this.shape.parent.remove(window.planeHelper);
+        }
+        window.planeHelper = new Microverse.THREE.PlaneHelper( interactionPlane, 10, 0xffff00 )
+        this.shape.parent.add(window.planeHelper);
         return interactionPlane;
     }
 
     startDrag(event) {
         console.log("start on axis", event);
-        const avatar = Microverse.GetPawn(event.avatarId);
+        let avatar = Microverse.GetPawn(event.avatarId);
+        let target = this.actor.parent.parent;
+
         // avatar.addFirstResponder("pointerMove", {shiftKey: true}, this);
         avatar.addFirstResponder("pointerMove", {}, this);
-        this.rotationAtDragStart = [...(this.actor.parent.parent._rotation || Microverse.q_identity())];
 
-        this.dragStart = event.ray.intersectPlane(
-            this.rotationInteractionPlane(),
-            new Microverse.THREE.Vector3()
-        );
+        let {THREE, v3_transform, m4_invert,q_multiply, m4_identity, m4_getRotation} = Microverse;
 
+        this._parentGlobal = target._parent ? target._parent.global : m4_identity();
+        this._parentInvert = target._parent ? m4_invert(target._parent.global) : m4_identity();
+        this.rotationAtDragStart = target.rotation;
+        this.globalStart = q_multiply(target.rotation, m4_getRotation(this._parentGlobal));
+
+        let origin = new THREE.Vector3(...event.ray.origin);
+        let direction = new THREE.Vector3(...event.ray.direction);
+        let ray = new THREE.Ray(origin, direction);
+
+        let intersectionPoint = ray.intersectPlane(this.rotationInteractionPlane(), new THREE.Vector3());
+
+        this.dragStart = intersectionPoint ? intersectionPoint.toArray() : null;
+
+        if (this.dragStart) {
+            this.dragStart = v3_transform(this.dragStart, this._parentInvert);
+        }
+
+        console.log("dragStart", this.dragStart);
     }
 
     drag(event) {
-        if (this.dragStart) {
-            const newDragPoint = event.ray.intersectPlane(
-                this.rotationInteractionPlane(),
-                new Microverse.THREE.Vector3()
-            );
+        if (!this.dragStart) {return;}
 
-            const startDirection = new Microverse.THREE.Vector3(...this.dragStart)
-                .sub(new Microverse.THREE.Vector3(...this.actor.parent.parent._translation))
-                .normalize();
-            const newDirection = new Microverse.THREE.Vector3(...newDragPoint)
-                .sub(new Microverse.THREE.Vector3(...this.actor.parent.parent._translation))
-                .normalize();
+        let {THREE, v3_transform, v3_normalize, v3_sub, v3_dot, v3_cross, q_multiply, q_axisAngle} = Microverse;
 
-            const normal = new Microverse.THREE.Vector3(...this.localRotationAxis());
+        let target = this.actor.parent.parent;
+        let origin = new THREE.Vector3(...event.ray.origin);
+        let direction = new THREE.Vector3(...event.ray.direction);
+        let ray = new THREE.Ray(origin, direction);
 
-            const angle = Math.atan2(startDirection.clone().cross(newDirection).dot(normal), startDirection.dot(newDirection))
+        let newDragPoint = ray.intersectPlane(
+            this.rotationInteractionPlane(),
+            new THREE.Vector3()
+        );
 
-            const nextRotation = Microverse.q_multiply(
-                this.rotationAtDragStart,
-                Microverse.q_axisAngle(this.localRotationAxis(), angle)
-            );
+        if (!newDragPoint) {return;}
 
-            console.log("drag on axis", event, angle);
-            this.publish(this.actor.id, "rotateTarget", nextRotation)
-        }
+        newDragPoint = v3_transform(newDragPoint.toArray(), this._parentInvert);
+
+        let startDirection = v3_normalize(v3_sub(this.dragStart, target.translation));
+        let newDirection = v3_normalize(v3_sub(newDragPoint, target.translation));
+        let normal = this.localRotationAxis();
+
+        let y = v3_dot(v3_cross(startDirection, newDirection), normal);
+        let x = v3_dot(startDirection, newDirection);
+
+        let angle = Math.atan2(y, x);
+
+        const nextRotation = q_multiply(this.rotationAtDragStart, q_axisAngle(this.localRotationAxis(), angle));
+
+        console.log("rotation around axis", newDragPoint, angle);
+        this.publish(this.parent.actor.id, "rotateTarget", nextRotation)
     }
 
     endDrag(event) {
@@ -416,7 +447,7 @@ class GizmoRotorPawn {
 
 class GizmoScalerActor {
     setup() {
-        this.listen("scaleTarget", "scaleTarget");
+        this.subscribe(this.parent.id, "scaleTarget", "scaleTarget");
     }
 
     scaleTarget(scale) {
@@ -432,7 +463,7 @@ class GizmoScalerPawn {
 
         let isMine = this.getMyAvatar().gizmoTargetPawn == this.parent.parent;
 
-        const gyro = new THREE.Gyroscope({scaleInvariant: true});
+        const gyro = new Microverse.THREE.Gyroscope({scaleInvariant: true});
         this.shape.add(gyro);
         gyro.add(
             this.makeAxisHelper(isMine)
@@ -518,7 +549,7 @@ class GizmoScalerPawn {
             let scaledCoordinate = this.actor._cardData.axis.findIndex(a => a == 1);
             nextScale[scaledCoordinate] *= scale;
 
-            this.publish(this.actor.id, "scaleTarget", nextScale);
+            this.publish(this.parent.actor.id, "scaleTarget", nextScale);
         }
     }
 

@@ -7,13 +7,14 @@ class AvatarActor {
     addOrCycleGizmo(target) {
         if (!this.gizmo) {
             this.gizmo = this.createCard({
-                translation: [0, 0, 0],
+                translation: target.translation,
                 name: 'gizmo',
                 behaviorModules: ["Gizmo"],
-                parent: target,
+                parent: target.parent,
                 type: "object",
                 noSave: true,
             });
+            this.gizmo.target = target;
         } else {
             this.publish(this.gizmo.id, "cycleModes");
         }
