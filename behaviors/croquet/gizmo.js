@@ -378,8 +378,8 @@ class GizmoRotorPawn {
         }
         window.planeHelper = new Microverse.THREE.PlaneHelper( interactionPlane, 10, 0xffff00 )
         this.shape.parent.add(window.planeHelper);
-        return interactionPlane;
         */
+        return interactionPlane;
     }
 
     startDrag(event) {
