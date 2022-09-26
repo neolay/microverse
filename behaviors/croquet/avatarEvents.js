@@ -4,7 +4,8 @@ class AvatarActor {
         this.listen("removeGizmo", "removeGizmo");
     }
 
-    addOrCycleGizmo(target) {
+    addOrCycleGizmo(data) {
+        let {target, viewId} = data;
         if (!this.gizmo) {
             this.gizmo = this.createCard({
                 translation: target.translation,
@@ -15,6 +16,7 @@ class AvatarActor {
                 noSave: true,
             });
             this.gizmo.target = target;
+            this.gizmo.creatorId = viewId;
         } else {
             this.publish(this.gizmo.id, "cycleModes");
         }
@@ -113,16 +115,15 @@ class AvatarPawn {
             }
         } else if (e.shiftKey) {
             if (pawn) {
-                console.log("on shift");
                 if (pawnIsGizmo) {
                     console.log("Tried to gizmo gizmo");
-                    this.publish(this.actor.id, "addOrCycleGizmo", this.gizmoTargetPawn.actor);
+                    this.publish(this.actor.id, "addOrCycleGizmo", {target: this.gizmoTargetPawn.actor, viewId: this.viewId});
                 } else {
                     if (this.gizmoTargetPawn != pawn) {
                         pawn.selectEdit();
                     }
                     this.gizmoTargetPawn = pawn;
-                    this.publish(this.actor.id, "addOrCycleGizmo", this.gizmoTargetPawn.actor);
+                    this.publish(this.actor.id, "addOrCycleGizmo", {target: this.gizmoTargetPawn.actor, viewId: this.viewId});
                 }
             } else {
                 this.publish(this.actor.id, "removeGizmo");

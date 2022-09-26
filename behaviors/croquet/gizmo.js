@@ -8,16 +8,32 @@ class GizmoActor {
         this.subscribe(this.target.id, "scaleSet", "scaleTarget");
     }
 
+    getScale(m) {
+        let x = [m[0], m[1], m[2]];
+        let y = [m[4], m[5], m[6]];
+        let z = [m[8], m[9], m[10]];
+
+        let length = (v) => Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+
+        return [length(x), length(y), length(z)];
+    }
+
     translateTarget() {
         let t = this.target.translation;
-        this.set({translation: t});
+        let s = this.target.parent ? this.getScale(this.target.parent.global) : [1, 1, 1];
+        this.set({translation: t, scale: [1 / s[0], 1 / s[1], 1 / s[2]]});
     }
 
     rotateTarget() {
         // in this case, gizmo itself should not rotate but the gyro should rotate so the three rings
         // show the euler angle of them in a sane way.
-        let r = this.target.rotation;
-        this.set({rotation: r});
+
+        if (this.gizmoMode === "move") {
+            this.set({rotation: [0, 0, 0, 1]});
+        } else {
+            let r = this.target.rotation;
+            this.set({rotation: r});
+        }
     }
 
     scaleTarget() {
@@ -35,7 +51,8 @@ class GizmoActor {
             }
 
             this.gizmoMode = "move";
-            this.set({rotation: [0, 0, 0, 1]});
+            let s = this.target.parent ? this.getScale(this.target.parent.global) : [1, 1, 1];
+            this.set({rotation: [0, 0, 0, 1], scale: [1 / s[0], 1 / s[1], 1 / s[2]]});
 
             this.moveX = this.createCard({
                 translation: [0, 0, 0],
@@ -79,7 +96,8 @@ class GizmoActor {
             this.moveY.destroy();
             this.moveZ.destroy();
 
-            this.set({rotation: this.target.rotation})
+            let s = this.target.parent ? this.getScale(this.target.parent.global) : [1, 1, 1];
+            this.set({rotation: this.target.rotation, scale: [1 / s[0], 1 / s[1], 1 / s[2]]});
 
             this.rotateX = this.createCard({
                 translation: [0, 0, 0],
@@ -117,7 +135,7 @@ class GizmoActor {
                 hoverColor: 0xffff00
             });
 
-        } else if (this.gizmoMode == "rotate") {
+        } else if (this.gizmoMode === "rotate") {
             this.gizmoMode = "scale";
 
             this.rotateX.destroy();
@@ -168,8 +186,6 @@ class GizmoPawn {
     setup() {
         console.log("pawn", this.actor.target);
         [...this.shape.children].forEach((c) => c.removeFromParent());
-        this.gyro = new Microverse.THREE.Gyroscope({rotationInvariant: false, scaleInvariant: true});
-        this.shape.add(this.gyro);
     }
 }
 
@@ -187,14 +203,9 @@ class GizmoAxisPawn {
     setup() {
         this.originalColor = this.actor._cardData.color;
 
-        let avatar = this.getMyAvatar();
-        let avatarTargetActor = avatar?.gizmoTargetPawn?.actor;
-        let targetActor = this?.parent?.actor?.target;
-        let isMine = avatarTargetActor === targetActor;
+        let isMine = this.parent?.actor.creatorId === this.viewId;
 
-        const gyro = new Microverse.THREE.Gyroscope({rotationInvariant: false, scaleInvariant: true});
-        this.shape.add(gyro);
-        gyro.add(this.makeAxisHelper(isMine));
+        this.shape.add(this.makeAxisHelper(isMine));
 
         this.dragStart = undefined;
         this.positionAtDragStart = undefined;
@@ -224,7 +235,7 @@ class GizmoAxisPawn {
 
         // avatar.addFirstResponder("pointerMove", {shiftKey: true}, this);
         avatar.addFirstResponder("pointerMove", {}, this);
-        let {m4_invert,v3_transform, m4_identity} = Microverse;
+        let {THREE, m4_invert,v3_transform, v3_normalize, v3_sub, m4_identity} = Microverse;
 
         this._parentGlobal = target._parent ? target._parent.global : m4_identity();
         this._parentInvert = target._parent ? m4_invert(target._parent.global) : m4_identity();
@@ -235,21 +246,10 @@ class GizmoAxisPawn {
         // if we are dragging along the Y axis
         this.intersectionPlane = new Microverse.THREE.Plane();
 
-        console.log(this.actor._cardData.axis);
-        if (this.actor._cardData.axis[0] === 1 || this.actor._cardData.axis[1] === 1) {
-            // intersect with the XY plane
-            this.intersectionPlane.setFromNormalAndCoplanarPoint(
-                new Microverse.THREE.Vector3(0, 0, 1),
-                new Microverse.THREE.Vector3(...this.globalStart)
-            );
-        } else {
-            // intersect with the YZ plane
-            this.intersectionPlane.setFromNormalAndCoplanarPoint(
-                new Microverse.THREE.Vector3(1, 0, 0),
-                new Microverse.THREE.Vector3(...this.globalStart)
-            );
-        }
-        console.log("intersectionPlane", this.intersectionPlane);
+        this.intersectionPlane.setFromNormalAndCoplanarPoint(
+            new THREE.Vector3(...v3_sub([0, 0, 0], v3_normalize(event.ray.direction))),
+            new Microverse.THREE.Vector3(...this.dragStart)
+        );
     }
 
     drag(event) {
@@ -296,11 +296,11 @@ class GizmoAxisPawn {
     }
 
     pointerEnter() {
-        this.shape.children[0].children[0].setColor(this.actor._cardData.hoverColor);
+        this.shape.children[0].setColor(this.actor._cardData.hoverColor);
     }
 
     pointerLeave() {
-        this.shape.children[0].children[0].setColor(this.originalColor);
+        this.shape.children[0].setColor(this.originalColor);
     }
 }
 
@@ -318,14 +318,8 @@ class GizmoRotorPawn {
     setup() {
         this.originalColor = this.actor._cardData.color;
 
-        let avatar = this.getMyAvatar();
-        let avatarTargetActor = avatar?.gizmoTargetPawn?.actor;
-        let targetActor = this?.parent?.actor?.target;
-        let isMine = avatarTargetActor === targetActor;
-
-        const gyro = new Microverse.THREE.Gyroscope({rotationInvariant: false, scaleInvariant: true});
-        this.shape.add(gyro);
-        gyro.add(this.createCircle(isMine ? this.actor._cardData.color : 0xffffff, this.actor._cardData.axis));
+        let isMine = this.parent?.actor.creatorId === this.viewId;
+        this.shape.add(this.createCircle(isMine ? this.actor._cardData.color : 0xffffff, this.actor._cardData.axis));
 
         this.dragStart = undefined;
         this.rotationAtDragStart = undefined;
@@ -360,7 +354,7 @@ class GizmoRotorPawn {
     }
 
     localRotationAxis() {
-        return Microverse.v3_rotate(this.actor._cardData.axis, this.rotationAtDragStart);//wrong
+        return Microverse.v3_rotate(this.actor._cardData.axis, this.rotationAtDragStart); // wrong?
     }
 
     rotationInteractionPlane(_event) {
@@ -382,6 +376,24 @@ class GizmoRotorPawn {
         return interactionPlane;
     }
 
+    getGlobalRotation(target) {
+        let {q_identity, q_multiply} = Microverse;
+        let q = q_identity();
+
+        let chain = [target];
+        let parent = chain.parent;
+        while (parent) {
+            target = parent;
+            parent = target.parent;
+            chain.push(target);
+        }
+
+        for (let i = 0; i < chain.length; i++) {
+            q = q_multiply(chain[i].rotation, q);
+        }
+        return q;
+    }
+
     startDrag(event) {
         console.log("start on axis", event);
         let avatar = Microverse.GetPawn(event.avatarId);
@@ -390,15 +402,14 @@ class GizmoRotorPawn {
         // avatar.addFirstResponder("pointerMove", {shiftKey: true}, this);
         avatar.addFirstResponder("pointerMove", {}, this);
 
-        let {THREE, v3_normalize, v3_transform, m4_getTranslation, m4_getRotation, m4_invert, m4_identity} = Microverse;
+        let {THREE, v3_normalize, v3_transform, m4_getTranslation, m4_invert, m4_identity} = Microverse;
 
         this._parentGlobal = target._parent ? target._parent.global : m4_identity();
         this._parentInvert = target._parent ? m4_invert(target._parent.global) : m4_identity();
         this._invert = m4_invert(target.global);
         this.rotationAtDragStart = target.rotation;
         this.globalTranslationAtStart = m4_getTranslation(target.global);
-        target._global = null;
-        this.globalRotationAtStart = m4_getRotation(target.global);
+        this.globalRotationAtStart = this.getGlobalRotation(target);
 
         let origin = new THREE.Vector3(...event.ray.origin);
         let direction = new THREE.Vector3(...event.ray.direction);
@@ -464,11 +475,11 @@ class GizmoRotorPawn {
     }
 
     pointerEnter() {
-        this.shape.children[0].children[0].material.color.set(this.actor._cardData.hoverColor);
+        this.shape.children[0].material.color.set(this.actor._cardData.hoverColor);
     }
 
     pointerLeave() {
-        this.shape.children[0].children[0].material.color.set(this.originalColor);
+        this.shape.children[0].material.color.set(this.originalColor);
     }
 }
 
@@ -488,13 +499,8 @@ class GizmoScalerPawn {
     setup() {
         this.originalColor = this.actor._cardData.color;
 
-        let isMine = this.getMyAvatar().gizmoTargetPawn == this.parent.parent;
-
-        const gyro = new Microverse.THREE.Gyroscope({scaleInvariant: true});
-        this.shape.add(gyro);
-        gyro.add(
-            this.makeAxisHelper(isMine)
-        );
+        let isMine = this.parent?.actor.creatorId === this.viewId;
+        this.shape.add(this.makeAxisHelper(isMine));
 
         this.dragStart = undefined;
         this.positionAtDragStart = undefined;
@@ -528,7 +534,7 @@ class GizmoScalerPawn {
     }
 
     localRotationAxis() {
-        let orthAxis = this.actor._cardData.axis[0] == 1 ? [0, 0, 1] : this.actor._cardData.axis[1] == 1 ? [0, 0, 1] : [1, 0, 0];
+        let orthAxis = this.actor._cardData.axis[0] === 1 ? [0, 0, 1] : this.actor._cardData.axis[1] === 1 ? [0, 0, 1] : [1, 0, 0];
         return Microverse.v3_rotate(orthAxis, this.actor.parent.parent._rotation || Microverse.q_identity());
     }
 
@@ -573,7 +579,7 @@ class GizmoScalerPawn {
             console.log("scale", scale);
 
             let nextScale = [...this.scaleAtDragStart];
-            let scaledCoordinate = this.actor._cardData.axis.findIndex(a => a == 1);
+            let scaledCoordinate = this.actor._cardData.axis.findIndex(a => a === 1);
             nextScale[scaledCoordinate] *= scale;
 
             this.publish(this.parent.actor.id, "scaleTarget", nextScale);
