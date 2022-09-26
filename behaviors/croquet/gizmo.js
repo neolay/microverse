@@ -37,8 +37,6 @@ class GizmoActor {
     }
 
     scaleTarget() {
-        let s = this.target.scale;
-        this.set({scale: s});
     }
 
     cycleModes() {
@@ -209,7 +207,6 @@ class GizmoAxisPawn {
 
         this.dragStart = undefined;
         this.positionAtDragStart = undefined;
-        // this.movementEnabled = false;
 
         if (isMine) {
             this.addEventListener("pointerDown", "startDrag");
@@ -489,99 +486,133 @@ class GizmoScalerActor {
     }
 
     scaleTarget(scale) {
-        console.log("scale target", scale);
-        this.parent.parent.set({scale})
+        this.parent.target.set({scale});
     }
 }
 
-// TODO: lots of duplication here with GizmoAxisPawn until behaviour classes can reference/extend each other
 class GizmoScalerPawn {
     setup() {
         this.originalColor = this.actor._cardData.color;
 
         let isMine = this.parent?.actor.creatorId === this.viewId;
-        this.shape.add(this.makeAxisHelper(isMine));
+
+        let scale = this.parent.call("Gizmo$GizmoActor", "getScale", this.actor.parent.target.global);
+
+        console.log(scale);
+        this.shape.add(this.makeScaleHandles(isMine, 3));
 
         this.dragStart = undefined;
         this.positionAtDragStart = undefined;
-        this.movementEnabled = false;
-        this.addEventListener("pointerDown", "startDrag");
-        this.addEventListener("pointerMove", "drag");
-        this.addEventListener("pointerUp", "endDrag");
-        this.addEventListener("pointerEnter", "pointerEnter");
-        this.addEventListener("pointerLeave", "pointerLeave");
+
+        this.subscribe(this.actor.parent.target.id, "scaleSet", "targetScaleSet");
+
+        if (isMine) {
+            this.addEventListener("pointerDown", "startDrag");
+            this.addEventListener("pointerMove", "drag");
+            this.addEventListener("pointerUp", "endDrag");
+            this.addEventListener("pointerEnter", "pointerEnter");
+            this.addEventListener("pointerLeave", "pointerLeave");
+        }
     }
 
-    makeAxisHelper(isMine) {
+    targetScaleSet(data) {
+        let isMine = this.parent?.actor.creatorId === this.viewId;
+        let max = Math.max(...data.v);
+        this.shape.add(this.makeScaleHandles(isMine, 3 * max));
+    }
+
+    makeScaleHandles(isMine, globalLength = 3) {
         const points = [];
-        points.push(new Microverse.THREE.Vector3(0, 0, 0));
-        points.push((new Microverse.THREE.Vector3(...this.actor._cardData.axis)).multiplyScalar(3));
+        let {THREE} = Microverse;
 
-        const geometry = new Microverse.THREE.BufferGeometry().setFromPoints( points );
-        const material = new Microverse.THREE.LineBasicMaterial({color: isMine ? this.originalColor : 0xffffff, toneMapped: false});
+        if (this.handleGroup) {
+            [...this.handleGroup.children].forEach((c) => {
+                c.material.dispose();
+                c.geometry.dispose();
+                c.removeFromParent();
+            });
+            this.handleGroup.removeFromParent();
+        }
 
-        const line = new Microverse.THREE.Line(geometry, material);
+        let group = new THREE.Group();
+        this.handleGroup = group;
 
-        const boxGeometry = new Microverse.THREE.BoxGeometry(0.3, 0.3, 0.3);
-        const boxMaterial = new Microverse.THREE.MeshBasicMaterial({color: isMine ? this.originalColor : 0xffffff, toneMapped: false});
-        const box = new Microverse.THREE.Mesh(boxGeometry, boxMaterial);
-        box.translateOnAxis(new Microverse.THREE.Vector3(...this.actor._cardData.axis), 3);
+        points.push(new THREE.Vector3(0, 0, 0));
+        points.push((new THREE.Vector3(...this.actor._cardData.axis)).multiplyScalar(globalLength));
 
-        const group = new Microverse.THREE.Group();
+        let geometry = new THREE.BufferGeometry().setFromPoints(points);
+        let material = new THREE.LineBasicMaterial({color: isMine ? this.originalColor : 0xffffff, toneMapped: false});
+
+        let line = new THREE.Line(geometry, material);
+
+        let boxGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+        let boxMaterial = new THREE.MeshBasicMaterial({color: isMine ? this.originalColor : 0xffffff, toneMapped: false});
+        let box = new THREE.Mesh(boxGeometry, boxMaterial);
+        box.translateOnAxis(new THREE.Vector3(...this.actor._cardData.axis), globalLength);
+
         group.add(line);
         group.add(box);
         return group;
     }
 
-    localRotationAxis() {
-        let orthAxis = this.actor._cardData.axis[0] === 1 ? [0, 0, 1] : this.actor._cardData.axis[1] === 1 ? [0, 0, 1] : [1, 0, 0];
-        return Microverse.v3_rotate(orthAxis, this.actor.parent.parent._rotation || Microverse.q_identity());
-    }
-
-    rotationInteractionPlane() {
-        const interactionPlane = new Microverse.THREE.Plane();
-        interactionPlane.setFromNormalAndCoplanarPoint(new Microverse.THREE.Vector3(...this.localRotationAxis()), new Microverse.THREE.Vector3(...this.actor.parent.parent._translation));
-        // if (window.planeHelper) {
-        //     this.shape.parent.remove(window.planeHelper);
-        //     window.planeHelper = undefined;
-        // }
-        // window.planeHelper = new Microverse.THREE.PlaneHelper( interactionPlane, 10, 0xffff00 )
-        // this.shape.parent.add(window.planeHelper);
-        return interactionPlane;
-    }
-
     startDrag(event) {
-        console.log("start on axis", event);
-        const avatar = Microverse.GetPawn(event.avatarId);
+        let avatar = Microverse.GetPawn(event.avatarId);
+        let target = this.actor.parent.target;
+
         // avatar.addFirstResponder("pointerMove", {shiftKey: true}, this);
         avatar.addFirstResponder("pointerMove", {}, this);
-        this.scaleAtDragStart = [...this.actor.parent.parent.scale];
+        let {THREE, m4_invert,v3_transform, v3_normalize, v3_sub, m4_identity} = Microverse;
 
-        this.dragStart = event.ray.intersectPlane(
-            this.rotationInteractionPlane(),
-            new Microverse.THREE.Vector3()
+        this._parentGlobal = target._parent ? target._parent.global : m4_identity();
+        this._parentInvert = target._parent ? m4_invert(target._parent.global) : m4_identity();
+        this.scaleAtDragStart = target.scale;
+        this.dragStart = event.xyz;
+        this.globalStart = v3_transform(target.translation, this._parentGlobal);
+
+        // if we are dragging along the Y axis
+        this.intersectionPlane = new Microverse.THREE.Plane();
+
+        this.intersectionPlane.setFromNormalAndCoplanarPoint(
+            new THREE.Vector3(...v3_sub([0, 0, 0], v3_normalize(event.ray.direction))),
+            new Microverse.THREE.Vector3(...this.dragStart)
         );
     }
 
     drag(event) {
+        let {THREE, v3_scale, v3_sub, v3_divide} = Microverse;
         if (this.dragStart) {
-            console.log("drag on axis", event);
-            const newDragPoint = event.ray.intersectPlane(
-                this.rotationInteractionPlane(),
+            let origin = new THREE.Vector3(...event.ray.origin);
+            let direction = new THREE.Vector3(...event.ray.direction);
+            let ray = new THREE.Ray(origin, direction);
+            let intersectionPoint = ray.intersectPlane(
+                this.intersectionPlane,
                 new Microverse.THREE.Vector3()
             );
 
-            let distanceAtDragStart = new Microverse.THREE.Vector3(...this.dragStart).sub(new Microverse.THREE.Vector3(...this.actor.parent.parent._translation)).length();
-            let distanceAtDragEnd = new Microverse.THREE.Vector3(...newDragPoint).sub(new Microverse.THREE.Vector3(...this.actor.parent.parent._translation)).length();
+            if (!intersectionPoint) {return;}
 
-            const scale = distanceAtDragEnd / distanceAtDragStart;
+            let globalHere = intersectionPoint.toArray();
+            let globalStart = this.dragStart;
 
-            console.log("scale", scale);
+            let localHere = Microverse.v3_transform(globalHere, this._parentInvert);
+            let localStart = Microverse.v3_transform(globalStart, this._parentInvert);
+            let localOrigin = this.globalStart;
+
+            let ns = v3_divide(v3_sub(localHere, localOrigin), v3_sub(localStart, localOrigin));
 
             let nextScale = [...this.scaleAtDragStart];
-            let scaledCoordinate = this.actor._cardData.axis.findIndex(a => a === 1);
-            nextScale[scaledCoordinate] *= scale;
 
+            let s;
+
+            if (this.actor._cardData.axis[0] === 1) {
+                s = ns[0];
+            } else if (this.actor._cardData.axis[1] === 1) {
+                s = ns[1];
+            } else if (this.actor._cardData.axis[2] === 1) {
+                s = ns[2];
+            }
+
+            nextScale = v3_scale(nextScale, s);
             this.publish(this.parent.actor.id, "scaleTarget", nextScale);
         }
     }
@@ -595,11 +626,11 @@ class GizmoScalerPawn {
     }
 
     pointerEnter() {
-        this.shape.children[0].children[0].children.forEach(child => child.material.color.set(this.actor._cardData.hoverColor));
+        this.shape.children[0].children.forEach(child => child.material.color.set(this.actor._cardData.hoverColor));
     }
 
     pointerLeave() {
-        this.shape.children[0].children[0].children.forEach(child => child.material.color.set(this.originalColor));
+        this.shape.children[0].children.forEach(child => child.material.color.set(this.originalColor));
     }
 }
 
