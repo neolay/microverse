@@ -7,6 +7,19 @@ class GizmoActor {
         this.subscribe(this.target.id, "translationSet", "translateTarget");
         this.subscribe(this.target.id, "rotationSet", "rotateTarget");
         this.subscribe(this.target.id, "scaleSet", "scaleTarget");
+        this.subscribe(this.sessionId, "view-exit", "goodBye");
+        this.listen("goodBye", "goodBye");
+    }
+
+    goodBye(viewId) {
+        let avatar = [...this.service("ActorManager").actors].find(([_k, actor]) => {
+            return actor.playerId === viewId;
+        });
+        if (avatar) {
+            avatar = avatar[1];
+        }
+        if (!avatar) {return;}
+        avatar.call("AvatarEventHandler$AvatarActor", "removeGizmo");
     }
 
     getScale(m) {
@@ -153,12 +166,51 @@ class GizmoActor {
                 color: 0x0000ff,
                 hoverColor: 0xffff00
             });
+
+            this.moveNX = this.createCard({
+                translation: [0, 0, 0],
+                name: 'gizmoAxisX',
+                behaviorModules: ["GizmoAxis"],
+                parent: this,
+                type: "object",
+                noSave: true,
+                axis: [-1, 0, 0],
+                color: 0xff0000,
+                hoverColor: 0xffff00
+            });
+
+            this.moveNY = this.createCard({
+                translation: [0, 0, 0],
+                name: 'gizmoAxisY',
+                behaviorModules: ["GizmoAxis"],
+                parent: this,
+                type: "object",
+                noSave: true,
+                axis: [0, -1, 0],
+                color: 0x00ff00,
+                hoverColor: 0xffff00
+            });
+
+            this.moveNZ = this.createCard({
+                translation: [0, 0, 0],
+                name: 'gizmoAxisZ',
+                behaviorModules: ["GizmoAxis"],
+                parent: this,
+                type: "object",
+                noSave: true,
+                axis: [0, 0, -1],
+                color: 0x0000ff,
+                hoverColor: 0xffff00
+            });
         } else if (this.gizmoMode === "move") {
             this.gizmoMode = "rotate";
 
             this.moveX.destroy();
             this.moveY.destroy();
             this.moveZ.destroy();
+            this.moveNX.destroy();
+            this.moveNY.destroy();
+            this.moveNZ.destroy();
 
             if (this.propertySheetButton) {
                 this.propertySheetButton.destroy();
@@ -252,6 +304,25 @@ class GizmoActor {
 
 class GizmoPawn {
     setup() {
+        this.lastTime = this.now();
+        if (!this.interval) {
+            this.interval = setInterval(() => this.checkInteraction(), 1000);
+        }
+        this.subscribe(this.id, "interaction", "interaction");
+    }
+
+    checkInteraction() {
+        let now = this.now();
+        if (now - this.lastTime > 15000) {
+            if (this.interval) {
+                clearInterval(this.interval);
+            }
+            this.say("goodBye", this.viewId);
+        }
+    }
+
+    interaction() {
+        this.lastTime = this.now();
     }
 }
 
@@ -286,12 +357,13 @@ class GizmoAxisPawn {
     }
 
     makeAxisHelper(isMine) {
-        return new Microverse.THREE.ArrowHelper(
+        let arrow = new Microverse.THREE.ArrowHelper(
             new Microverse.THREE.Vector3(...this.actor._cardData.axis),
             new Microverse.THREE.Vector3(0, 0, 0),
             3,
             isMine ? this.originalColor : 0xffffff
-        )
+        );
+        return arrow;
     }
 
     startDrag(event) {
@@ -315,6 +387,8 @@ class GizmoAxisPawn {
             new THREE.Vector3(...v3_sub([0, 0, 0], v3_normalize(event.ray.direction))),
             new Microverse.THREE.Vector3(...this.dragStart)
         );
+
+        this.publish(this.parent.id, "interaction");
     }
 
     drag(event) {
@@ -339,11 +413,11 @@ class GizmoAxisPawn {
             let delta3D = Microverse.v3_sub(localHere, localStart);
 
             let nextPosition = [...this.positionAtDragStart];
-            if (this.actor._cardData.axis[0] === 1) {
+            if (this.actor._cardData.axis[0] === 1 || this.actor._cardData.axis[0] === -1) {
                 nextPosition[0] += delta3D[0];
-            } else if (this.actor._cardData.axis[1] === 1) {
+            } else if (this.actor._cardData.axis[1] === 1 || this.actor._cardData.axis[1] === -1) {
                 nextPosition[1] += delta3D[1];
-            } else if (this.actor._cardData.axis[2] === 1) {
+            } else if (this.actor._cardData.axis[2] === 1 || this.actor._cardData.axis[2] === -1) {
                 nextPosition[2] += delta3D[2];
             }
             // console.log(nextPosition);
@@ -358,14 +432,17 @@ class GizmoAxisPawn {
         const avatar = Microverse.GetPawn(event.avatarId);
         // avatar.removeFirstResponder("pointerMove", {shiftKey: true}, this);
         avatar.removeFirstResponder("pointerMove", {}, this);
+        this.publish(this.parent.id, "interaction");
     }
 
     pointerEnter() {
         this.shape.children[0].setColor(this.actor._cardData.hoverColor);
+        this.publish(this.parent.id, "interaction");
     }
 
     pointerLeave() {
         this.shape.children[0].setColor(this.originalColor);
+        this.publish(this.parent.id, "interaction");
     }
 }
 
@@ -470,7 +547,7 @@ class GizmoRotorPawn {
         let {THREE, v3_normalize, v3_transform, m4_getTranslation, m4_invert, m4_identity} = Microverse;
 
         this._parentGlobal = target._parent ? target._parent.global : m4_identity();
-        this._parentInvert = target._parent ? m4_invert(target._parent.global) : m4_identity();
+        this._parentInvert = m4_invert(this._parentGlobal);
         this._invert = m4_invert(target.global);
         this.rotationAtDragStart = target.rotation;
         this.globalTranslationAtStart = m4_getTranslation(target.global);
@@ -492,6 +569,7 @@ class GizmoRotorPawn {
         }
 
         console.log("dragStart", this.dragStart);
+        this.publish(this.parent.id, "interaction");
     }
 
     drag(event) {
@@ -537,6 +615,7 @@ class GizmoRotorPawn {
         const nextRotation = q_multiply(axisAngle, this.rotationAtDragStart);
 
         this.publish(this.parent.actor.id, "rotateTarget", nextRotation)
+        this.publish(this.parent.id, "interaction");
     }
 
     endDrag(event) {
@@ -545,14 +624,17 @@ class GizmoRotorPawn {
         const avatar = Microverse.GetPawn(event.avatarId);
         // avatar.removeFirstResponder("pointerMove", {shiftKey: true}, this);
         avatar.removeFirstResponder("pointerMove", {}, this);
+        this.publish(this.parent.id, "interaction");
     }
 
     pointerEnter() {
         this.shape.children[0].material.color.set(this.actor._cardData.hoverColor);
+        this.publish(this.parent.id, "interaction");
     }
 
     pointerLeave() {
         this.shape.children[0].material.color.set(this.originalColor);
+        this.publish(this.parent.id, "interaction");
     }
 }
 
@@ -569,13 +651,10 @@ class GizmoScalerActor {
 class GizmoScalerPawn {
     setup() {
         this.originalColor = this.actor._cardData.color;
-
         let isMine = this.parent?.actor.creatorId === this.viewId;
-
-        let scale = this.parent.call("Gizmo$GizmoActor", "getScale", this.actor.parent.target.global);
-
-        console.log(scale);
-        this.shape.add(this.makeScaleHandles(isMine, 3));
+        let max = this.getGlobalLength();
+        console.log(max);
+        this.shape.add(this.makeScaleHandles(isMine, max * 1.2));
 
         this.dragStart = undefined;
         this.positionAtDragStart = undefined;
@@ -591,10 +670,21 @@ class GizmoScalerPawn {
         }
     }
 
-    targetScaleSet(data) {
+    getGlobalLength() {
+        let {THREE, GetPawn} = Microverse;
+        let targetPawn = GetPawn(this.actor.parent.target.id);
+
+        let size = new THREE.Vector3(0, 0, 0);
+        new THREE.Box3().setFromObject(targetPawn.shape).getSize(size);
+        let max = Math.max(size.x, size.y, size.z);
+
+        return max;
+    }
+
+    targetScaleSet(_data) {
         let isMine = this.parent?.actor.creatorId === this.viewId;
-        let max = Math.max(...data.v);
-        this.shape.add(this.makeScaleHandles(isMine, 3 * max));
+        let max = this.getGlobalLength();
+        this.shape.add(this.makeScaleHandles(isMine, max * 1.2));
     }
 
     makeScaleHandles(isMine, globalLength = 3) {
@@ -632,18 +722,19 @@ class GizmoScalerPawn {
     }
 
     startDrag(event) {
-        let avatar = Microverse.GetPawn(event.avatarId);
+        // avatar.addFirstResponder("pointerMove", {shiftKey: true}, this);
+        let {THREE, m4_invert,v3_transform, v3_normalize, v3_sub, m4_identity, GetPawn} = Microverse;
+        let avatar = GetPawn(event.avatarId);
+        avatar.addFirstResponder("pointerMove", {}, this);
         let target = this.actor.parent.target;
 
-        // avatar.addFirstResponder("pointerMove", {shiftKey: true}, this);
-        avatar.addFirstResponder("pointerMove", {}, this);
-        let {THREE, m4_invert,v3_transform, v3_normalize, v3_sub, m4_identity} = Microverse;
-
         this._parentGlobal = target._parent ? target._parent.global : m4_identity();
-        this._parentInvert = target._parent ? m4_invert(target._parent.global) : m4_identity();
+        this._parentInvert = m4_invert(this._parentGlobal);
         this.scaleAtDragStart = target.scale;
         this.dragStart = event.xyz;
-        this.globalStart = v3_transform(target.translation, this._parentGlobal);
+        // this.globalStart = v3_transform(target.translation, this._parentGlobal);
+        this._targetInvert = m4_invert(target.global);
+        this.localStart = target.translation;
 
         // if we are dragging along the Y axis
         this.intersectionPlane = new Microverse.THREE.Plane();
@@ -652,6 +743,7 @@ class GizmoScalerPawn {
             new THREE.Vector3(...v3_sub([0, 0, 0], v3_normalize(event.ray.direction))),
             new Microverse.THREE.Vector3(...this.dragStart)
         );
+        this.publish(this.parent.id, "interaction");
     }
 
     drag(event) {
@@ -670,16 +762,17 @@ class GizmoScalerPawn {
             let globalHere = intersectionPoint.toArray();
             let globalStart = this.dragStart;
 
-            let localHere = Microverse.v3_transform(globalHere, this._parentInvert);
-            let localStart = Microverse.v3_transform(globalStart, this._parentInvert);
-            let localOrigin = this.globalStart;
+            let localHere = Microverse.v3_transform(globalHere, this._targetInvert);
+            let localStart = Microverse.v3_transform(globalStart, this._targetInvert);
+            let localOrigin = [0, 0, 0];
 
-            let ns = v3_divide(v3_sub(localHere, localOrigin), v3_sub(localStart, localOrigin));
+            let ratio = v3_divide(v3_sub(localHere, localOrigin), v3_sub(localStart, localOrigin));
+
+            let ns = ratio;
 
             let nextScale = [...this.scaleAtDragStart];
 
             let s;
-
             if (this.actor._cardData.axis[0] === 1) {
                 s = ns[0];
             } else if (this.actor._cardData.axis[1] === 1) {
@@ -688,8 +781,12 @@ class GizmoScalerPawn {
                 s = ns[2];
             }
 
-            nextScale = v3_scale(nextScale, s);
-            this.publish(this.parent.actor.id, "scaleTarget", nextScale);
+            console.log("global", this.dragStart, globalHere);
+            console.log("local", localHere, localStart, ratio, s);
+            let realNextScale = v3_scale(nextScale, s);
+            console.log(ratio, this.scaleAtDragStart, nextScale, realNextScale);
+            this.publish(this.parent.actor.id, "scaleTarget", realNextScale);
+            this.publish(this.parent.id, "interaction");
         }
     }
 
@@ -699,6 +796,7 @@ class GizmoScalerPawn {
         let avatar = Microverse.GetPawn(event.avatarId);
         // avatar.removeFirstResponder("pointerMove", {shiftKey: true}, this);
         avatar.removeFirstResponder("pointerMove", {}, this);
+        this.publish(this.parent.id, "interaction");
     }
 
     pointerEnter() {
@@ -743,11 +841,13 @@ class GizmoPropertySheetButtonPawn {
     hilite() {
         this.entered = true;
         this.setColor();
+        this.publish(this.parent.id, "interaction");
     }
 
     unhilite() {
         this.entered = false;
         this.setColor();
+        this.publish(this.parent.id, "interaction");
     }
 
     openPropertySheet(event) {
