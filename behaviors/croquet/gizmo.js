@@ -1,8 +1,9 @@
 class GizmoActor {
     setup() {
-        console.log("actor", this.parent, this.target);
+        console.log("actor", this.parent);
         this.listen("cycleModes", "cycleModes");
         this.cycleModes();
+        this.addPropertySheetButton();
         this.subscribe(this.target.id, "translationSet", "translateTarget");
         this.subscribe(this.target.id, "rotationSet", "rotateTarget");
         this.subscribe(this.target.id, "scaleSet", "scaleTarget");
@@ -36,7 +37,72 @@ class GizmoActor {
         }
     }
 
-    scaleTarget() {
+    scaleTarget() {}
+
+    closestCorner(creatorId) {
+        let avatar = [...this.service("ActorManager").actors].find(([_k, actor]) => {
+            return actor.playerId === creatorId;
+        });
+        if (avatar) {
+            avatar = avatar[1];
+        }
+        if (!avatar) {return;}
+        let {m4_identity, v3_transform, v3_magnitude, v3_sub, v3_add} = Microverse;
+        let target = this.target;
+        let parentGlobal = target._parent ? target._parent.global : m4_identity();
+        let t = target.translation;
+        let g = v3_transform(t, parentGlobal);
+
+        let a = avatar.translation;
+
+        let offsets = [
+            [ 2,  2,  2],
+            [-2,  2,  2],
+            [ 2, -2,  2],
+            [-2, -2,  2],
+            [ 2,  2, -2],
+            [-2,  2, -2],
+            [ 2, -2, -2],
+            [-2, -2, -2]
+        ];
+
+        let locals = offsets.map((o) => v3_add(t, o));
+        let parents = locals.map((l) => v3_transform(l, parentGlobal));
+
+        let dist = Number.MAX_VALUE;
+        let min = -1;
+
+        for (let i = 0; i < parents.length; i++) {
+            let thisDist = v3_magnitude(v3_sub(a, parents[i]));
+            if (thisDist <= dist && parents[i][1] > g[1]) {
+                dist = thisDist;
+                min = i;
+            }
+        }
+        return offsets[min];
+    }
+
+    addPropertySheetButton() {
+        if (this.propertySheetButton) {
+            this.propertySheetButton.destroy();
+        }
+
+        let t = this.closestCorner(this.creatorId);
+
+        this.propertySheetButton = this.createCard({
+            name: "property sheet button",
+            behaviorModules: ["GizmoPropertySheetButton"],
+            type: "object",
+            parent: this,
+            noSave: true,
+            translation: t,
+        });
+
+        this.subscribe(this.propertySheetButton.id, "openPropertySheet", "openPropertySheet");
+    }
+
+    openPropertySheet(toWhom) {
+        this.target.showControls(toWhom);
     }
 
     cycleModes() {
@@ -93,6 +159,10 @@ class GizmoActor {
             this.moveX.destroy();
             this.moveY.destroy();
             this.moveZ.destroy();
+
+            if (this.propertySheetButton) {
+                this.propertySheetButton.destroy();
+            }
 
             let s = this.target.parent ? this.getScale(this.target.parent.global) : [1, 1, 1];
             this.set({rotation: this.target.rotation, scale: [1 / s[0], 1 / s[1], 1 / s[2]]});
@@ -182,8 +252,6 @@ class GizmoActor {
 
 class GizmoPawn {
     setup() {
-        console.log("pawn", this.actor.target);
-        [...this.shape.children].forEach((c) => c.removeFromParent());
     }
 }
 
@@ -454,12 +522,20 @@ class GizmoRotorPawn {
         let projNewDirection = newDragPoint;
         let normal = this.localRotationAxis();
 
-        let angle = Math.atan2(v3_dot(v3_cross(projStartDirection, projNewDirection), normal), v3_dot(projStartDirection, projNewDirection));
+        let sign;
+        if (this.actor._cardData.axis[0] === 1) {
+            sign = normal[0] < 0 ? -1 : 1;
+        } else if (this.actor._cardData.axis[1] === 1) {
+            sign = normal[1] < 0 ? -1 : 1;
+        } else if (this.actor._cardData.axis[2] === 1) {
+            sign = normal[2] < 0 ? -1 : 1;
+        }
+
+        let angle = Math.atan2(v3_dot(v3_cross(projStartDirection, projNewDirection), normal), v3_dot(projStartDirection, projNewDirection)) * sign;
 
         let axisAngle = q_axisAngle(this.actor._cardData.axis, angle);
         const nextRotation = q_multiply(axisAngle, this.rotationAtDragStart);
 
-        // console.log("rotation around axis", newDragPoint, angle);
         this.publish(this.parent.actor.id, "rotateTarget", nextRotation)
     }
 
@@ -620,7 +696,7 @@ class GizmoScalerPawn {
     endDrag(event) {
         console.log("end on axis", event);
         this.dragStart = undefined;
-        const avatar = Microverse.GetPawn(event.avatarId);
+        let avatar = Microverse.GetPawn(event.avatarId);
         // avatar.removeFirstResponder("pointerMove", {shiftKey: true}, this);
         avatar.removeFirstResponder("pointerMove", {}, this);
     }
@@ -631,6 +707,52 @@ class GizmoScalerPawn {
 
     pointerLeave() {
         this.shape.children[0].children.forEach(child => child.material.color.set(this.originalColor));
+    }
+}
+
+class GizmoPropertySheetButtonPawn {
+    setup() {
+        let isMine = this.parent?.actor.creatorId === this.viewId;
+
+        this.makeButton();
+        if (isMine) {
+            this.addEventListener("pointerMove", "nop");
+            this.addEventListener("pointerEnter", "hilite");
+            this.addEventListener("pointerLeave", "unhilite");
+            this.addEventListener("pointerDown", "openPropertySheet");
+        }
+    }
+
+    makeButton() {
+        [...this.shape.children].forEach((c) => this.shape.remove(c));
+
+        let geometry = new Microverse.THREE.SphereGeometry(0.15, 16, 16);
+        let material = new Microverse.THREE.MeshStandardMaterial({color: 0xcccccc, metalness: 0.8});
+        let button = new Microverse.THREE.Mesh(geometry, material);
+        this.shape.add(button);
+        this.setColor();
+    }
+
+    setColor() {
+        let baseColor = this.entered ? 0xeeeeee : 0xcccccc;
+        if (this.shape.children[0] && this.shape.children[0].material) {
+            this.shape.children[0].material.color.setHex(baseColor);
+        }
+    }
+
+    hilite() {
+        this.entered = true;
+        this.setColor();
+    }
+
+    unhilite() {
+        this.entered = false;
+        this.setColor();
+    }
+
+    openPropertySheet(event) {
+        let avatar = Microverse.GetPawn(event.avatarId);
+        this.publish(this.actor.id, "openPropertySheet", {avatar: event.avatarId, distance: avatar.targetDistance});
     }
 }
 
@@ -655,6 +777,10 @@ export default {
             name: "GizmoScaler",
             actorBehaviors: [GizmoScalerActor],
             pawnBehaviors: [GizmoScalerPawn],
+        },
+        {
+            name: "GizmoPropertySheetButton",
+            pawnBehaviors: [GizmoPropertySheetButtonPawn],
         }
     ]
 }

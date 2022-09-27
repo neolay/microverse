@@ -68,7 +68,7 @@ class AvatarPawn {
     pointerTap(_e) {
         if (this.editPawn) { // this gets set in pointerDown
             this.editPawn.unselectEdit();
-            this.editPawn.showControls({avatar: this.actor.id,distance: this.targetDistance});
+            this.editPawn.showControls({avatar: this.actor.id, distance: this.targetDistance});
             this.editPawn = null;
             this.editPointerId = null;
         }
