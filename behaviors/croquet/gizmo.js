@@ -423,8 +423,6 @@ class GizmoAxisPawn {
     }
 
     endDrag(event) {
-        console.log("end on axis", event);
-
         delete this.gizmoDragStart;
         delete this.gizmoParentInvert;
         delete this.gizmoPositionAtDragStart;
@@ -517,7 +515,6 @@ class GizmoRotorPawn {
     }
 
     startDrag(event) {
-        console.log("start on axis", event);
         let avatar = Microverse.GetPawn(event.avatarId);
         let target = this.parent.actor.target;
 
@@ -595,8 +592,6 @@ class GizmoRotorPawn {
     }
 
     endDrag(event) {
-        console.log("end on axis", event);
-
         delete this.gizmoTargetInvert;
         delete this.gizmoRotationAtDragStart;
         delete this.gizmoGlobalTranslationAtStart;
@@ -632,8 +627,8 @@ class GizmoScalerPawn {
     setup() {
         this.originalColor = this.actor._cardData.color;
         let isMine = this.parent?.actor.creatorId === this.viewId;
-        let max = this.getGlobalLength();
-        this.shape.add(this.makeScaleHandles(isMine, max * 1.2));
+
+        this.targetScaleSet();
 
         this.subscribe(this.actor.parent.target.id, "scaleSet", "targetScaleSet");
 
@@ -647,24 +642,33 @@ class GizmoScalerPawn {
     }
 
     getGlobalLength() {
-        let {THREE, GetPawn} = Microverse;
-        let targetPawn = GetPawn(this.actor.parent.target.id);
+        let {THREE, GetPawn, m4_invert, v3_transform, v3_multiply} = Microverse;
 
-        let size = new THREE.Vector3(0, 0, 0);
-        new THREE.Box3().setFromObject(targetPawn.shape).getSize(size);
-        let max = Math.max(size.x, size.y, size.z);
+        let target = this.actor.parent?.target;
+        let targetPawn = GetPawn(target.id);
+        let invert = m4_invert(target.global);
 
-        return max;
+        let box = new THREE.Box3().setFromObject(targetPawn.shape);
+
+        let min = v3_transform(box.min.toArray(), invert);
+        let max = v3_transform(box.max.toArray(), invert);
+
+        let s = this.actor.parent.call("Gizmo$GizmoActor", "getScale", target.global);
+
+        min = v3_multiply(min, s);
+        max = v3_multiply(max, s);
+
+        return {min, max};
     }
 
     targetScaleSet(_data) {
         let isMine = this.parent?.actor.creatorId === this.viewId;
-        let max = this.getGlobalLength();
-        this.shape.add(this.makeScaleHandles(isMine, max * 1.2));
+        let box = this.getGlobalLength();
+        this.shape.add(this.makeScaleHandles(isMine, box, 1.2));
     }
 
-    makeScaleHandles(isMine, globalLength = 3) {
-        const points = [];
+    makeScaleHandles(isMine, box3, margin) {
+        let points = [];
         let {THREE} = Microverse;
 
         if (this.handleGroup) {
@@ -680,7 +684,9 @@ class GizmoScalerPawn {
         this.handleGroup = group;
 
         points.push(new THREE.Vector3(0, 0, 0));
-        points.push((new THREE.Vector3(...this.actor._cardData.axis)).multiplyScalar(globalLength));
+
+        let s = this.actor._cardData.axis.indexOf(1);
+        points.push((new THREE.Vector3(...this.actor._cardData.axis)).multiplyScalar(box3.max[s] * margin));
 
         let geometry = new THREE.BufferGeometry().setFromPoints(points);
         let material = new THREE.LineBasicMaterial({color: isMine ? this.originalColor : 0xffffff, toneMapped: false});
@@ -690,7 +696,7 @@ class GizmoScalerPawn {
         let boxGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
         let boxMaterial = new THREE.MeshBasicMaterial({color: isMine ? this.originalColor : 0xffffff, toneMapped: false});
         let box = new THREE.Mesh(boxGeometry, boxMaterial);
-        box.translateOnAxis(new THREE.Vector3(...this.actor._cardData.axis), globalLength);
+        box.translateOnAxis(new THREE.Vector3(...this.actor._cardData.axis), box3.max[s] * margin);
 
         group.add(line);
         group.add(box);
@@ -760,7 +766,6 @@ class GizmoScalerPawn {
     }
 
     endDrag(event) {
-        console.log("end on axis", event);
         this.dragStart = undefined;
         let avatar = Microverse.GetPawn(event.avatarId);
         // avatar.removeFirstResponder("pointerMove", {shiftKey: true}, this);
