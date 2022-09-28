@@ -59,7 +59,6 @@ class AvatarPawn {
 
         this.removeLastResponder("keyUp", {ctrlKey: true}, this);
         this.removeEventListener("keyUp", this.keyUp);
-
     }
 }
 

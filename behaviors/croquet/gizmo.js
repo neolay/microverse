@@ -367,6 +367,8 @@ class GizmoAxisPawn {
         let avatar = Microverse.GetPawn(event.avatarId);
         let target = this.actor.parent.target;
 
+        if (!event.ray) {return;}
+
         // avatar.addFirstResponder("pointerMove", {shiftKey: true}, this);
         avatar.addFirstResponder("pointerMove", {}, this);
         let {THREE, m4_invert, v3_normalize, v3_sub, m4_identity} = Microverse;
@@ -388,38 +390,36 @@ class GizmoAxisPawn {
     }
 
     drag(event) {
-        if (this.gizmoDragStart) {
-            let origin = new Microverse.THREE.Vector3(...event.ray.origin);
-            let direction = new Microverse.THREE.Vector3(...event.ray.direction);
-            let ray = new Microverse.THREE.Ray(origin, direction);
-            let intersectionPoint = ray.intersectPlane(
-                this.intersectionPlane,
-                new Microverse.THREE.Vector3()
-            );
+        if (!this.gizmoDragStart || !event.ray) {return;}
 
-            // console.log("intersectionPoint", intersectionPoint);
+        let origin = new Microverse.THREE.Vector3(...event.ray.origin);
+        let direction = new Microverse.THREE.Vector3(...event.ray.direction);
+        let ray = new Microverse.THREE.Ray(origin, direction);
+        let intersectionPoint = ray.intersectPlane(
+            this.intersectionPlane,
+            new Microverse.THREE.Vector3()
+        );
 
-            if (!intersectionPoint) {return;}
+        if (!intersectionPoint) {return;}
 
-            let globalHere = intersectionPoint.toArray();
-            let globalStart = this.gizmoDragStart;
+        let globalHere = intersectionPoint.toArray();
+        let globalStart = this.gizmoDragStart;
 
-            let localHere = Microverse.v3_transform(globalHere, this.gizmoParentInvert);
-            let localStart = Microverse.v3_transform(globalStart, this.gizmoParentInvert);
-            let delta3D = Microverse.v3_sub(localHere, localStart);
+        let localHere = Microverse.v3_transform(globalHere, this.gizmoParentInvert);
+        let localStart = Microverse.v3_transform(globalStart, this.gizmoParentInvert);
+        let delta3D = Microverse.v3_sub(localHere, localStart);
 
-            let nextPosition = [...this.gizmoPositionAtDragStart];
-            if (this.actor._cardData.axis[0] === 1 || this.actor._cardData.axis[0] === -1) {
-                nextPosition[0] += delta3D[0];
-            } else if (this.actor._cardData.axis[1] === 1 || this.actor._cardData.axis[1] === -1) {
-                nextPosition[1] += delta3D[1];
-            } else if (this.actor._cardData.axis[2] === 1 || this.actor._cardData.axis[2] === -1) {
-                nextPosition[2] += delta3D[2];
-            }
-            // console.log(nextPosition);
-            this.publish(this.parent.actor.id, "translateTarget", nextPosition);
-            // this.set({translation: nextPosition})
+        let nextPosition = [...this.gizmoPositionAtDragStart];
+        if (this.actor._cardData.axis[0] === 1 || this.actor._cardData.axis[0] === -1) {
+            nextPosition[0] += delta3D[0];
+        } else if (this.actor._cardData.axis[1] === 1 || this.actor._cardData.axis[1] === -1) {
+            nextPosition[1] += delta3D[1];
+        } else if (this.actor._cardData.axis[2] === 1 || this.actor._cardData.axis[2] === -1) {
+            nextPosition[2] += delta3D[2];
         }
+        // console.log(nextPosition);
+        this.publish(this.parent.actor.id, "translateTarget", nextPosition);
+        // this.set({translation: nextPosition})
     }
 
     endDrag(event) {
@@ -518,6 +518,8 @@ class GizmoRotorPawn {
         let avatar = Microverse.GetPawn(event.avatarId);
         let target = this.parent.actor.target;
 
+        if (!event.ray) {return;}
+
         // avatar.addFirstResponder("pointerMove", {shiftKey: true}, this);
         avatar.addFirstResponder("pointerMove", {}, this);
 
@@ -546,7 +548,7 @@ class GizmoRotorPawn {
     }
 
     drag(event) {
-        if (!this.dragStart) {return;}
+        if (!this.dragStart || !event.ray) {return;}
 
         let {THREE, v3_transform, v3_normalize, v3_cross, v3_dot, q_multiply, q_axisAngle} = Microverse;
 
@@ -710,6 +712,8 @@ class GizmoScalerPawn {
         avatar.addFirstResponder("pointerMove", {}, this);
         let target = this.actor.parent.target;
 
+        if (!event.ray) {return;}
+
         this.scaleAtDragStart = target.scale;
         this.dragStart = event.xyz;
         this.targetInvert = m4_invert(target.global);
@@ -725,44 +729,42 @@ class GizmoScalerPawn {
     }
 
     drag(event) {
+        if (!this.dragStart || !event.ray) {return;}
+
         let {THREE, v3_scale, v3_sub, v3_divide} = Microverse;
-        if (this.dragStart) {
-            let origin = new THREE.Vector3(...event.ray.origin);
-            let direction = new THREE.Vector3(...event.ray.direction);
-            let ray = new THREE.Ray(origin, direction);
-            let intersectionPoint = ray.intersectPlane(
-                this.intersectionPlane,
-                new Microverse.THREE.Vector3()
-            );
 
-            if (!intersectionPoint) {return;}
+        let origin = new THREE.Vector3(...event.ray.origin);
+        let direction = new THREE.Vector3(...event.ray.direction);
+        let ray = new THREE.Ray(origin, direction);
+        let intersectionPoint = ray.intersectPlane(
+            this.intersectionPlane,
+            new Microverse.THREE.Vector3()
+        );
 
-            let globalHere = intersectionPoint.toArray();
-            let globalStart = this.dragStart;
+        if (!intersectionPoint) {return;}
 
-            let localHere = Microverse.v3_transform(globalHere, this.targetInvert);
-            let localStart = Microverse.v3_transform(globalStart, this.targetInvert);
-            let localOrigin = [0, 0, 0];
+        let globalHere = intersectionPoint.toArray();
+        let globalStart = this.dragStart;
 
-            let ratio = v3_divide(v3_sub(localHere, localOrigin), v3_sub(localStart, localOrigin));
+        let localHere = Microverse.v3_transform(globalHere, this.targetInvert);
+        let localStart = Microverse.v3_transform(globalStart, this.targetInvert);
+        let localOrigin = [0, 0, 0];
 
-            let ns = ratio;
+        let ratio = v3_divide(v3_sub(localHere, localOrigin), v3_sub(localStart, localOrigin));
+        let nextScale = [...this.scaleAtDragStart];
 
-            let nextScale = [...this.scaleAtDragStart];
-
-            let s;
-            if (this.actor._cardData.axis[0] === 1) {
-                s = ns[0];
-            } else if (this.actor._cardData.axis[1] === 1) {
-                s = ns[1];
-            } else if (this.actor._cardData.axis[2] === 1) {
-                s = ns[2];
-            }
-
-            let realNextScale = v3_scale(nextScale, s);
-            this.publish(this.parent.actor.id, "scaleTarget", realNextScale);
-            this.publish(this.parent.id, "interaction");
+        let s;
+        if (this.actor._cardData.axis[0] === 1) {
+            s = ratio[0];
+        } else if (this.actor._cardData.axis[1] === 1) {
+            s = ratio[1];
+        } else if (this.actor._cardData.axis[2] === 1) {
+            s = ratio[2];
         }
+
+        let realNextScale = v3_scale(nextScale, s);
+        this.publish(this.parent.actor.id, "scaleTarget", realNextScale);
+        this.publish(this.parent.id, "interaction");
     }
 
     endDrag(event) {

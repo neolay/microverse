@@ -227,11 +227,7 @@ export const PM_PointerTarget = superclass => class extends superclass {
     registerEventListener(data) {
         // console.log("registerEventLIstener", data);
         let {eventName} = data;
-        let func = (evt) => {
-            let newEvt = {...evt};
-            delete newEvt.ray;
-            this.say("dispatchEvent", {eventName, evt: newEvt});
-        };
+        let func = (evt) => this.say("dispatchEvent", {eventName, evt: newEvt});
         this.modelListeners.set(eventName, func);
         this.addEventListener(eventName, func, `dispatch_${eventName}`);
     }
