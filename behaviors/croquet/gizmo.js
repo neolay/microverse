@@ -344,9 +344,6 @@ class GizmoAxisPawn {
 
         this.shape.add(this.makeAxisHelper(isMine));
 
-        this.dragStart = undefined;
-        this.positionAtDragStart = undefined;
-
         if (isMine) {
             this.addEventListener("pointerDown", "startDrag");
             this.addEventListener("pointerMove", "drag");
@@ -372,27 +369,26 @@ class GizmoAxisPawn {
 
         // avatar.addFirstResponder("pointerMove", {shiftKey: true}, this);
         avatar.addFirstResponder("pointerMove", {}, this);
-        let {THREE, m4_invert,v3_transform, v3_normalize, v3_sub, m4_identity} = Microverse;
+        let {THREE, m4_invert, v3_normalize, v3_sub, m4_identity} = Microverse;
 
-        this._parentGlobal = target._parent ? target._parent.global : m4_identity();
-        this._parentInvert = target._parent ? m4_invert(target._parent.global) : m4_identity();
-        this.positionAtDragStart = target.translation;
-        this.dragStart = event.xyz;
-        this.globalStart = v3_transform(target.translation, this._parentGlobal);
+        let parentGlobal = target._parent ? target._parent.global : m4_identity();
+        this.gizmoParentInvert = m4_invert(parentGlobal);
+        this.gizmoPositionAtDragStart = target.translation;
+        this.gizmoDragStart = event.xyz;
 
         // if we are dragging along the Y axis
         this.intersectionPlane = new Microverse.THREE.Plane();
 
         this.intersectionPlane.setFromNormalAndCoplanarPoint(
             new THREE.Vector3(...v3_sub([0, 0, 0], v3_normalize(event.ray.direction))),
-            new Microverse.THREE.Vector3(...this.dragStart)
+            new Microverse.THREE.Vector3(...this.gizmoDragStart)
         );
 
         this.publish(this.parent.id, "interaction");
     }
 
     drag(event) {
-        if (this.dragStart) {
+        if (this.gizmoDragStart) {
             let origin = new Microverse.THREE.Vector3(...event.ray.origin);
             let direction = new Microverse.THREE.Vector3(...event.ray.direction);
             let ray = new Microverse.THREE.Ray(origin, direction);
@@ -406,13 +402,13 @@ class GizmoAxisPawn {
             if (!intersectionPoint) {return;}
 
             let globalHere = intersectionPoint.toArray();
-            let globalStart = this.dragStart;
+            let globalStart = this.gizmoDragStart;
 
-            let localHere = Microverse.v3_transform(globalHere, this._parentInvert);
-            let localStart = Microverse.v3_transform(globalStart, this._parentInvert);
+            let localHere = Microverse.v3_transform(globalHere, this.gizmoParentInvert);
+            let localStart = Microverse.v3_transform(globalStart, this.gizmoParentInvert);
             let delta3D = Microverse.v3_sub(localHere, localStart);
 
-            let nextPosition = [...this.positionAtDragStart];
+            let nextPosition = [...this.gizmoPositionAtDragStart];
             if (this.actor._cardData.axis[0] === 1 || this.actor._cardData.axis[0] === -1) {
                 nextPosition[0] += delta3D[0];
             } else if (this.actor._cardData.axis[1] === 1 || this.actor._cardData.axis[1] === -1) {
@@ -428,7 +424,11 @@ class GizmoAxisPawn {
 
     endDrag(event) {
         console.log("end on axis", event);
-        this.dragStart = undefined;
+
+        delete this.gizmoDragStart;
+        delete this.gizmoParentInvert;
+        delete this.gizmoPositionAtDragStart;
+
         const avatar = Microverse.GetPawn(event.avatarId);
         // avatar.removeFirstResponder("pointerMove", {shiftKey: true}, this);
         avatar.removeFirstResponder("pointerMove", {}, this);
@@ -463,8 +463,6 @@ class GizmoRotorPawn {
         let isMine = this.parent?.actor.creatorId === this.viewId;
         this.shape.add(this.createCircle(isMine ? this.actor._cardData.color : 0xffffff, this.actor._cardData.axis));
 
-        this.dragStart = undefined;
-        this.rotationAtDragStart = undefined;
         if (isMine) {
             this.addEventListener("pointerDown", "startDrag");
             this.addEventListener("pointerMove", "drag");
@@ -496,16 +494,16 @@ class GizmoRotorPawn {
     }
 
     localRotationAxis() {
-        return Microverse.v3_rotate(this.actor._cardData.axis, this.rotationAtDragStart); // wrong?
+        return Microverse.v3_rotate(this.actor._cardData.axis, this.gizmoRotationAtDragStart); // wrong?
     }
 
     rotationInteractionPlane(_event) {
         let {THREE} = Microverse;
-        const interactionPlane = new THREE.Plane();
+        let interactionPlane = new THREE.Plane();
 
         interactionPlane.setFromNormalAndCoplanarPoint(
             new THREE.Vector3(...this.localRotationAxis()),
-            new THREE.Vector3(...this.globalTranslationAtStart));
+            new THREE.Vector3(...this.gizmoGlobalTranslationAtStart));
 
         /*
         if (window.planeHelper) {
@@ -518,24 +516,6 @@ class GizmoRotorPawn {
         return interactionPlane;
     }
 
-    getGlobalRotation(target) {
-        let {q_identity, q_multiply} = Microverse;
-        let q = q_identity();
-
-        let chain = [target];
-        let parent = chain.parent;
-        while (parent) {
-            target = parent;
-            parent = target.parent;
-            chain.push(target);
-        }
-
-        for (let i = 0; i < chain.length; i++) {
-            q = q_multiply(chain[i].rotation, q);
-        }
-        return q;
-    }
-
     startDrag(event) {
         console.log("start on axis", event);
         let avatar = Microverse.GetPawn(event.avatarId);
@@ -544,14 +524,11 @@ class GizmoRotorPawn {
         // avatar.addFirstResponder("pointerMove", {shiftKey: true}, this);
         avatar.addFirstResponder("pointerMove", {}, this);
 
-        let {THREE, v3_normalize, v3_transform, m4_getTranslation, m4_invert, m4_identity} = Microverse;
+        let {THREE, v3_normalize, v3_transform, m4_getTranslation, m4_invert} = Microverse;
 
-        this._parentGlobal = target._parent ? target._parent.global : m4_identity();
-        this._parentInvert = m4_invert(this._parentGlobal);
-        this._invert = m4_invert(target.global);
-        this.rotationAtDragStart = target.rotation;
-        this.globalTranslationAtStart = m4_getTranslation(target.global);
-        this.globalRotationAtStart = this.getGlobalRotation(target);
+        this.gizmoTargetInvert = m4_invert(target.global);
+        this.gizmoRotationAtDragStart = target.rotation;
+        this.gizmoGlobalTranslationAtStart = m4_getTranslation(target.global);
 
         let origin = new THREE.Vector3(...event.ray.origin);
         let direction = new THREE.Vector3(...event.ray.direction);
@@ -563,12 +540,11 @@ class GizmoRotorPawn {
         );
 
         if (dragPoint) {
-            let localPoint = v3_transform(dragPoint.toArray(), this._invert);
+            let localPoint = v3_transform(dragPoint.toArray(), this.gizmoTargetInvert);
             let dir = v3_normalize(localPoint);
             this.dragStart = dir;
         }
 
-        console.log("dragStart", this.dragStart);
         this.publish(this.parent.id, "interaction");
     }
 
@@ -589,7 +565,7 @@ class GizmoRotorPawn {
         );
 
         if (dragPoint) {
-            let localPoint = v3_transform(dragPoint.toArray(), this._invert);
+            let localPoint = v3_transform(dragPoint.toArray(), this.gizmoTargetInvert);
             let dir = v3_normalize(localPoint);
             newDragPoint = dir;
         }
@@ -612,7 +588,7 @@ class GizmoRotorPawn {
         let angle = Math.atan2(v3_dot(v3_cross(projStartDirection, projNewDirection), normal), v3_dot(projStartDirection, projNewDirection)) * sign;
 
         let axisAngle = q_axisAngle(this.actor._cardData.axis, angle);
-        const nextRotation = q_multiply(axisAngle, this.rotationAtDragStart);
+        const nextRotation = q_multiply(axisAngle, this.gizmoRotationAtDragStart);
 
         this.publish(this.parent.actor.id, "rotateTarget", nextRotation)
         this.publish(this.parent.id, "interaction");
@@ -620,7 +596,11 @@ class GizmoRotorPawn {
 
     endDrag(event) {
         console.log("end on axis", event);
-        this.dragStart = undefined;
+
+        delete this.gizmoTargetInvert;
+        delete this.gizmoRotationAtDragStart;
+        delete this.gizmoGlobalTranslationAtStart;
+
         const avatar = Microverse.GetPawn(event.avatarId);
         // avatar.removeFirstResponder("pointerMove", {shiftKey: true}, this);
         avatar.removeFirstResponder("pointerMove", {}, this);
@@ -653,11 +633,7 @@ class GizmoScalerPawn {
         this.originalColor = this.actor._cardData.color;
         let isMine = this.parent?.actor.creatorId === this.viewId;
         let max = this.getGlobalLength();
-        console.log(max);
         this.shape.add(this.makeScaleHandles(isMine, max * 1.2));
-
-        this.dragStart = undefined;
-        this.positionAtDragStart = undefined;
 
         this.subscribe(this.actor.parent.target.id, "scaleSet", "targetScaleSet");
 
@@ -723,18 +699,14 @@ class GizmoScalerPawn {
 
     startDrag(event) {
         // avatar.addFirstResponder("pointerMove", {shiftKey: true}, this);
-        let {THREE, m4_invert,v3_transform, v3_normalize, v3_sub, m4_identity, GetPawn} = Microverse;
+        let {THREE, m4_invert, v3_normalize, v3_sub, GetPawn} = Microverse;
         let avatar = GetPawn(event.avatarId);
         avatar.addFirstResponder("pointerMove", {}, this);
         let target = this.actor.parent.target;
 
-        this._parentGlobal = target._parent ? target._parent.global : m4_identity();
-        this._parentInvert = m4_invert(this._parentGlobal);
         this.scaleAtDragStart = target.scale;
         this.dragStart = event.xyz;
-        // this.globalStart = v3_transform(target.translation, this._parentGlobal);
-        this._targetInvert = m4_invert(target.global);
-        this.localStart = target.translation;
+        this.targetInvert = m4_invert(target.global);
 
         // if we are dragging along the Y axis
         this.intersectionPlane = new Microverse.THREE.Plane();
@@ -762,8 +734,8 @@ class GizmoScalerPawn {
             let globalHere = intersectionPoint.toArray();
             let globalStart = this.dragStart;
 
-            let localHere = Microverse.v3_transform(globalHere, this._targetInvert);
-            let localStart = Microverse.v3_transform(globalStart, this._targetInvert);
+            let localHere = Microverse.v3_transform(globalHere, this.targetInvert);
+            let localStart = Microverse.v3_transform(globalStart, this.targetInvert);
             let localOrigin = [0, 0, 0];
 
             let ratio = v3_divide(v3_sub(localHere, localOrigin), v3_sub(localStart, localOrigin));
@@ -781,10 +753,7 @@ class GizmoScalerPawn {
                 s = ns[2];
             }
 
-            console.log("global", this.dragStart, globalHere);
-            console.log("local", localHere, localStart, ratio, s);
             let realNextScale = v3_scale(nextScale, s);
-            console.log(ratio, this.scaleAtDragStart, nextScale, realNextScale);
             this.publish(this.parent.actor.id, "scaleTarget", realNextScale);
             this.publish(this.parent.id, "interaction");
         }
