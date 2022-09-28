@@ -19,7 +19,7 @@ class GizmoActor {
             avatar = avatar[1];
         }
         if (!avatar) {return;}
-        avatar.call("AvatarEventHandler$AvatarActor", "removeGizmo");
+        avatar.removeGizmo();
     }
 
     getScale(m) {

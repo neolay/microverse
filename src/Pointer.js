@@ -478,7 +478,6 @@ export const PM_Pointer = superclass => class extends superclass {
             this.invokeListeners(eventName, this.focusPawn, rc, e);
         }
 
-        // this is dubious but we clear the editPawn anyway.
         let lastResponder = this.findLastResponder(e, eventName);
         if (lastResponder) {
             return this.invokeListeners(eventName, lastResponder, rc, e);
