@@ -19,7 +19,7 @@ export function init(Constants) {
 
     Constants.UserBehaviorDirectory = "behaviors/diverse";
     Constants.UserBehaviorModules = [
-        "lights.js", "sound.js", "throb.js", "urlLink.js", "bounce.js", "simpleSpin.js", "text3D.js",
+        "lights.js", "sound.js", "throb.js", "urlLink.js", "bounce.js", "simpleSpin.js", "text3D.js", "script.js", "flag.js"
     ];
 
     Constants.DefaultCards = [
@@ -138,6 +138,69 @@ export function init(Constants) {
                 behaviorModules: ["Text3D", "Throb"],
                 shadow: true,
                 throbTimes: 3,
+            }
+        },
+        {
+            card: {
+                name: "code editor",
+                translation: [11.914606500892997, 0.4, 0.25],
+                rotation: [0, -Math.PI / 2, 0],
+                scale: [2, 2, 2],
+                layers: ["pointer"],
+                type: "code",
+                behaviorModule: "Script.ScriptActor",
+                margins: {left: 32, top: 32, right: 32, bottom: 32},
+                // margins: {left: 16, top: 16, right: 16, bottom: 16},
+                textScale: 0.001,
+                width: 1.5,
+                height: 2,
+                depth: 0.05,
+                fullBright: true,
+                frameColor: 0x888888,
+            }
+        },
+        {
+            card: {
+                name: "green flag",
+                translation: [11.914606500892997, 2.55, -1.1],
+                scale: [0.2, 0.2, 0.2],
+                rotation: [0, -Math.PI / 2, 0],
+                type: "2d",
+                textureType: "image",
+                textureLocation: "./assets/images/green-flag.jpg",
+                fullBright: true,
+                frameColor: 0xcccccc,
+                color: 0xbbbbbb,
+                cornerRadius: 0.05,
+                depth: 0.05,
+                shadow: true,
+                behaviorModules: ["ScratchFlag", "Script"],
+            }
+        },
+        // {
+        //     card: {
+        //         name: "scratch cat 2",
+        //         type: "3d",
+        //         dataLocation: "./assets/3D/scratch_cat.glb.zip",
+        //         layers: ["pointer"],
+        //         translation: [10.42596507350599, 0.4, 4.034355344818362],
+        //         rotation: [0, -Math.PI / 2, 0],
+        //         dataScale: [2, 2, 2],
+        //         shadow: true,
+        //         sound: "./assets/sounds/Meow.wav",
+        //         behaviorModules: ["SpriteSound", "Throb"],
+        //         throbTimes: 1,
+        //     }
+        // },
+        {
+            card: {
+                name: "windmill2",
+                type: "3d",
+                dataLocation: "./assets/3D/windmill.glb.zip",
+                layers: ["pointer"],
+                translation: [10.42596507350599, 0.4, 4.034355344818362],
+                dataScale: [0.7, 0.7, 0.7],
+                shadow: true,
             }
         },
     ];
