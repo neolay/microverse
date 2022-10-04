@@ -19,6 +19,7 @@ import { TextFieldActor } from "./text/text.js";
 
 import {setupWorldMenuButton, filterDomEventsOn} from "./worldMenu.js";
 import { startSettingsMenu } from "./settingsMenu.js";
+import {PM_WidgetPointer} from "./Widget3";
 // import Swal from "sweetalert2";
 
 const EYE_HEIGHT = 1.676;
@@ -726,7 +727,7 @@ class RemoteAvatarPawn extends mix(CardPawn).with(PM_Player, PM_ThreeVisible) {
 
 let dormantAvatarSpec = null;
 let useDormantAvatarSpec = true;
-export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver, PM_ThreeVisible, PM_ThreeCamera, PM_Pointer) {
+export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver, PM_ThreeVisible, PM_ThreeCamera, PM_Pointer, PM_WidgetPointer) {
     constructor(actor) {
         super(actor);
 

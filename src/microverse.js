@@ -26,6 +26,7 @@ import { MultiBlaster } from '../apps/multiblaster.js';
 import JSZip from 'jszip';
 import * as fflate from 'fflate';
 import {AssetManager} from "./wcAssetManager.js";
+import {WidgetManager} from "./Widget3";
 // import {loadThreeJSLib} from "./ThreeJSLibLoader.js";
 //import {loadThreeLibs} from "../three/threeLibsLoader.js";
 
@@ -622,6 +623,7 @@ class MyViewRoot extends ViewRoot {
             SyncedStateManager,
             VideoManager,
             BehaviorViewManager,
+            WidgetManager,
         ];
         if (window.settingsMenuConfiguration?.voice) services.push(AgoraChatManager);
         return services;

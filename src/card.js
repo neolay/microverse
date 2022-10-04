@@ -18,6 +18,7 @@ import { TextFieldActor } from './text/text.js';
 import { DynamicTexture } from './DynamicTexture.js'
 import { AM_Code, PM_Code } from './code.js';
 import { WorldSaver } from './worldSaver.js';
+import {PM_Widget3} from "./Widget3";
 
 // import { forEach } from 'jszip';
 
@@ -477,7 +478,7 @@ CardActor.register('CardActor');
 //------------------------------------------------------------------------------------------
 
 
-export class CardPawn extends mix(Pawn).with(PM_Smoothed, PM_ThreeVisible, PM_PointerTarget, PM_Code) {
+export class CardPawn extends mix(Pawn).with(PM_Smoothed, PM_ThreeVisible, PM_PointerTarget, PM_Code, PM_Widget3) {
     constructor(actor) {
         super(actor);
         this.addToLayers(...actor.layers);
