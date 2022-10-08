@@ -29,6 +29,8 @@ class PixelActor {
         }
 
         this.state = this.initialState();
+
+        this.subscribe("input", "xDown", "showSnowCrash");
     }
 
     initialState() {
@@ -68,6 +70,18 @@ class PixelActor {
 
     getRandomColor() {
         return new Microverse.THREE.Color(Math.random(), Math.random(), Math.random());
+    }
+
+    showSnowCrash() {
+        for (let x = 0; x < 5; x++) {
+            for (let y = 0; y < 5; y++) {
+                if (this.getRandomInt(2) === 1) {
+                    this.setPixel(x, y, 0xFFFFFF);
+                } else {
+                    this.setPixel(x, y, 0x000000);
+                }
+            }
+        }
     }
 }
 
