@@ -41,21 +41,6 @@ class PixelActor {
         console.log("setPixel", this.state);
     }
 
-    render() {
-        for (let x = 0; x < this.pixelX; x++) {
-            for (let y = 0; y < this.pixelY; y++) {
-                const on = this.state[x][y];
-                const led = this.leds[x * this.pixelY + y];
-                if (on) {
-                    const color = this.state[x][y];
-                    this.publish(led.id, "ledOn", color);
-                } else {
-                    this.publish(led.id, "ledOff");
-                }
-            }
-        }
-    }
-
     getRandomInt(max) {
         return Math.floor(Math.random() * max);
     }
@@ -74,13 +59,15 @@ class PixelActor {
                 }
             }
         }
-        this.render();
+        this.say("render");
     }
 }
 
 class PixelPawn {
     setup() {
         const THREE = Microverse.THREE;
+        this.pixelX = this.actor._cardData.pixelX;
+        this.pixelY = this.actor._cardData.pixelY;
         const boardWidth = this.actor._cardData.width;
         const boardHeight = this.actor._cardData.height;
         const boardDepth = this.actor._cardData.depth;
@@ -91,12 +78,34 @@ class PixelPawn {
         );
 
         this.shape.add(board);
+        this.render();
+        this.listen("render", "render");
+    }
+
+    render() {
+        for (let x = 0; x < this.pixelX; x++) {
+            for (let y = 0; y < this.pixelY; y++) {
+                const on = this.actor.state[x][y];
+                const led = this.actor.leds[x * this.pixelY + y];
+                if (on) {
+                    const color = this.actor.state[x][y];
+                    this.publish(led.id, "ledOn", color);
+                } else {
+                    this.publish(led.id, "ledOff", 0x000000);
+                }
+            }
+        }
     }
 }
 
 class LEDActor {
     setup() {
+        this.subscribe(this.id, "ledOn", "updateLed");
+        this.subscribe(this.id, "ledOff", "updateLed");
+    }
 
+    updateLed(color) {
+        this.say("updateLed", color);
     }
 }
 
@@ -110,29 +119,14 @@ class LEDPawn {
             new THREE.BoxGeometry(width, height, 0.1, 2, 2, 2),
             new THREE.MeshBasicMaterial({color: 0x000000}));
 
-        // if you try to increase the number of lights (change pixelX or pixelY), you may see the error:
-        // Program Info Log: FRAGMENT shader uniforms count exceeds MAX_FRAGMENT_UNIFORM_VECTORS(1024)
-        // so comment out temporarily
-
-        // this.light = new THREE.PointLight(0x000000, 0, 3);
-        // this.led.add(this.light);
-
         this.shape.add(this.led);
 
-        this.subscribe(this.actor.id, "ledOn", "ledOn");
-        this.subscribe(this.actor.id, "ledOff", "ledOff");
+        this.listen("updateLed", "updateLed");
     }
 
-    ledOn(color) {
-        // console.log("subscribe ledOn", this.actor.id, this.led, color);
+    updateLed(color) {
+        console.log("updateLed", color);
         this.led.material.color.set(color);
-        // this.light.color.set(color);
-        // this.light.intensity = 1;
-    }
-
-    ledOff() {
-        this.led.material.color.set(0x000000);
-        // this.light.intensity = 0;
     }
 }
 
