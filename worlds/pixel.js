@@ -43,6 +43,34 @@ export function init(Constants) {
                 dataType: "exr",
             }
         },
+        // {
+        //     card: {
+        //         name: "pixel1",
+        //         behaviorModules: ["Pixel"],
+        //         layers: ["pointer"],
+        //         type: "object",
+        //         translation: [-5, 0.6, -16.87],
+        //         // rotation: [0, -Math.PI / 2, 0],
+        //         shadow: true,
+        //         scale: [3, 3, 3],
+        //         pixelX: 5,
+        //         pixelY: 5,
+        //     },
+        // },
+        // {
+        //     card: {
+        //         name: "pixel2",
+        //         behaviorModules: ["Pixel"],
+        //         layers: ["pointer"],
+        //         type: "object",
+        //         translation: [5.5, 0.6, -16.87],
+        //         // rotation: [0, -Math.PI / 2, 0],
+        //         shadow: true,
+        //         scale: [1, 1, 1],
+        //         pixelX: 16,
+        //         pixelY: 16,
+        //     },
+        // },
         {
             card: {
                 name: "pixel1",
@@ -53,22 +81,8 @@ export function init(Constants) {
                 // rotation: [0, -Math.PI / 2, 0],
                 shadow: true,
                 scale: [3, 3, 3],
-                pixelX: 5,
-                pixelY: 5,
-            },
-        },
-        {
-            card: {
-                name: "pixel2",
-                behaviorModules: ["Pixel"],
-                layers: ["pointer"],
-                type: "object",
-                translation: [5.5, 0.6, -16.87],
-                // rotation: [0, -Math.PI / 2, 0],
-                shadow: true,
-                scale: [1, 1, 1],
-                pixelX: 16,
-                pixelY: 16,
+                pixelX: 2,
+                pixelY: 3,
             },
         },
     ];

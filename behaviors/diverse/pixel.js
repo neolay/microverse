@@ -45,7 +45,7 @@ class PixelActor {
         for (let x = 0; x < this.pixelX; x++) {
             for (let y = 0; y < this.pixelY; y++) {
                 const on = this.state[x][y];
-                const led = this.leds[x * this.pixelX + y];
+                const led = this.leds[x * this.pixelY + y];
                 if (on) {
                     const color = this.state[x][y];
                     this.publish(led.id, "ledOn", color);
@@ -124,7 +124,7 @@ class LEDPawn {
     }
 
     ledOn(color) {
-        console.log("subscribe ledOn", this.actor.id, this.led, color);
+        // console.log("subscribe ledOn", this.actor.id, this.led, color);
         this.led.material.color.set(color);
         // this.light.color.set(color);
         // this.light.intensity = 1;
