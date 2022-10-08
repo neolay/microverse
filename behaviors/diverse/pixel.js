@@ -1,18 +1,18 @@
 class PixelActor {
     setup() {
         this.leds = [];
-        const pixelX = this._cardData.pixelX || 5;
-        const pixelY = this._cardData.pixelY || 5;
+        this.pixelX = this._cardData.pixelX || 5;
+        this.pixelY = this._cardData.pixelY || 5;
         const spacingCol = this._cardData.spacingCol || 0.05;
         const spacingRow = this._cardData.spacingRow || 0.05;
         const ledWidth = this._cardData.ledWidth || 0.2;
         const ledHeight = this._cardData.ledHeight || 0.2;
-        const boardWidth = this._cardData.width ||= ledWidth * pixelX + spacingCol * (pixelX + 1);
-        const boardHeight = this._cardData.height ||= ledHeight * pixelY + spacingRow * (pixelY + 1);
+        const boardWidth = this._cardData.width ||= ledWidth * this.pixelX + spacingCol * (this.pixelX + 1);
+        const boardHeight = this._cardData.height ||= ledHeight * this.pixelY + spacingRow * (this.pixelY + 1);
         const boardDepth = this._cardData.depth ||= 0.05;
 
-        for (let x = 0; x < pixelX; x++) {
-            for (let y = 0; y < pixelY; y++) {
+        for (let x = 0; x < this.pixelX; x++) {
+            for (let y = 0; y < this.pixelY; y++) {
                 const led = this.createCard({
                     translation: [(2 * x + 1) / 2 * ledWidth + spacingCol * (x + 1) - boardWidth / 2,
                         -(2 * y + 1) / 2 * ledHeight - spacingRow * (y + 1) + boardHeight / 2, 0],
@@ -28,32 +28,24 @@ class PixelActor {
             }
         }
 
-        this.state = this.initialState();
-
+        this.state = this.initialState(this.pixelX, this.pixelY);
         this.subscribe("input", "xDown", "showSnowCrash");
     }
 
-    initialState() {
-        return [
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-        ];
+    initialState(x, y) {
+        return new Array(x).fill(0).map(() => new Array(y).fill(0));
     }
 
     setPixel(x, y, color) {
         this.state[x][y] = color;
-        this.render();
         console.log("setPixel", this.state);
     }
 
     render() {
-        for (let x = 0; x < 5; x++) {
-            for (let y = 0; y < 5; y++) {
+        for (let x = 0; x < this.pixelX; x++) {
+            for (let y = 0; y < this.pixelY; y++) {
                 const on = this.state[x][y];
-                const led = this.leds[x * 5 + y];
+                const led = this.leds[x * this.pixelX + y];
                 if (on) {
                     const color = this.state[x][y];
                     this.publish(led.id, "ledOn", color);
@@ -73,8 +65,8 @@ class PixelActor {
     }
 
     showSnowCrash() {
-        for (let x = 0; x < 5; x++) {
-            for (let y = 0; y < 5; y++) {
+        for (let x = 0; x < this.pixelX; x++) {
+            for (let y = 0; y < this.pixelY; y++) {
                 if (this.getRandomInt(2) === 1) {
                     this.setPixel(x, y, 0xFFFFFF);
                 } else {
@@ -82,6 +74,7 @@ class PixelActor {
                 }
             }
         }
+        this.render();
     }
 }
 
@@ -116,8 +109,13 @@ class LEDPawn {
         this.led = new THREE.Mesh(
             new THREE.BoxGeometry(width, height, 0.1, 2, 2, 2),
             new THREE.MeshBasicMaterial({color: 0x000000}));
-        this.light = new THREE.PointLight(0x000000, 0, 3);
-        this.led.add(this.light);
+
+        // if you try to increase the number of lights (change pixelX or pixelY), you may see the error:
+        // Program Info Log: FRAGMENT shader uniforms count exceeds MAX_FRAGMENT_UNIFORM_VECTORS(1024)
+        // so comment out temporarily
+
+        // this.light = new THREE.PointLight(0x000000, 0, 3);
+        // this.led.add(this.light);
 
         this.shape.add(this.led);
 
@@ -128,13 +126,13 @@ class LEDPawn {
     ledOn(color) {
         console.log("subscribe ledOn", this.actor.id, this.led, color);
         this.led.material.color.set(color);
-        this.light.color.set(color);
-        this.light.intensity = 1;
+        // this.light.color.set(color);
+        // this.light.intensity = 1;
     }
 
     ledOff() {
         this.led.material.color.set(0x000000);
-        this.light.intensity = 0;
+        // this.light.intensity = 0;
     }
 }
 

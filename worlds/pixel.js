@@ -57,5 +57,19 @@ export function init(Constants) {
                 pixelY: 5,
             },
         },
+        {
+            card: {
+                name: "pixel2",
+                behaviorModules: ["Pixel"],
+                layers: ["pointer"],
+                type: "object",
+                translation: [5.5, 0.6, -16.87],
+                // rotation: [0, -Math.PI / 2, 0],
+                shadow: true,
+                scale: [1, 1, 1],
+                pixelX: 16,
+                pixelY: 16,
+            },
+        },
     ];
 }
