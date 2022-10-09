@@ -154,7 +154,10 @@ class BagDisplayActor {
     }
 
     getRandomColor() {
-        return new Microverse.THREE.Color(Math.random(), Math.random(), Math.random());
+        const r = Math.floor(Math.random() * 256);
+        const g = Math.floor(Math.random() * 256);
+        const b = Math.floor(Math.random() * 256);
+        return b | g << 8 | r << 16;
     }
 
     showSnowCrash() {
@@ -371,7 +374,10 @@ class StripDisplayActor {
     }
 
     getRandomColor() {
-        return new Microverse.THREE.Color(Math.random(), Math.random(), Math.random());
+        const r = Math.floor(Math.random() * 256);
+        const g = Math.floor(Math.random() * 256);
+        const b = Math.floor(Math.random() * 256);
+        return b | g << 8 | r << 16;
     }
 
     rotate(offset = 1) {
@@ -507,7 +513,7 @@ class StripDisplayActor {
         const g = g$ + m;
         const b = b$ + m;
 
-        return new Microverse.THREE.Color(`rgb(${r}, ${g}, ${b})`);
+        return b | g << 8 | r << 16;
     }
 }
 
