@@ -350,6 +350,99 @@ class PixelDisplayPawn {
     }
 }
 
+class StripDisplayActor {
+    setup() {
+        this.pixelX = this._cardData.pixelX || 16;
+        this.pixelY = this._cardData.pixelY || 1;
+        this.state = this.initialState(this.pixelX, this.pixelY);
+
+        this.random();
+    }
+
+    initialState(x, y) {
+        return new Array(x).fill(0).map(() => new Array(y).fill(0));
+    }
+
+    setPixel(x, y, color) {
+        this.state[x][y] = color;
+        // console.log("setPixel", this.state);
+    }
+
+    getRandomColor() {
+        return new Microverse.THREE.Color(Math.random(), Math.random(), Math.random());
+    }
+
+    random() {
+        for (let x = 0; x < this.pixelX; x++) {
+            for (let y = 0; y < this.pixelY; y++) {
+                this.setPixel(x, y, this.getRandomColor());
+            }
+        }
+        this.say("render");
+        this.future(50).random();
+    }
+
+}
+
+class StripDisplayPawn {
+    setup() {
+        this.generatePixel();
+
+        this.render();
+        this.listen("render", "render");
+    }
+
+    generatePixel() {
+        const THREE = Microverse.THREE;
+
+        this.leds = [];
+        this.pixelX = this.actor._cardData.pixelX || 16;
+        this.pixelY = this.actor._cardData.pixelY || 1;
+        const spacingCol = this.actor._cardData.spacingCol || 0.05;
+        const spacingRow = this.actor._cardData.spacingRow || 0.05;
+        const ledWidth = this.actor._cardData.ledWidth || 0.2;
+        const ledHeight = this.actor._cardData.ledHeight || 0.2;
+        const boardWidth = this.actor._cardData.width ||= ledWidth * this.pixelX + spacingCol * (this.pixelX + 1);
+        const boardHeight = this.actor._cardData.height ||= ledHeight * this.pixelY + spacingRow * (this.pixelY + 1);
+        const boardDepth = this.actor._cardData.depth ||= 0.05;
+
+        const board = new THREE.Mesh(
+            new THREE.BoxGeometry(boardWidth, boardHeight, boardDepth, 2, 2, 2),
+            new THREE.MeshBasicMaterial({color: 0x000000, toneMapped: false}),
+        );
+
+        for (let x = 0; x < this.pixelX; x++) {
+            for (let y = 0; y < this.pixelY; y++) {
+                const led = new THREE.Mesh(
+                    new THREE.BoxGeometry(ledWidth, ledHeight, 0.1, 2, 2, 2),
+                    new THREE.MeshBasicMaterial({color: 0x000000, toneMapped: false}));
+                const translation = [(2 * x + 1) / 2 * ledWidth + spacingCol * (x + 1) - boardWidth / 2,
+                    -(2 * y + 1) / 2 * ledHeight - spacingRow * (y + 1) + boardHeight / 2, 0];
+                led.position.set(translation[0], translation[1], translation[2]);
+                board.add(led);
+                this.leds.push(led);
+            }
+        }
+
+        this.shape.add(board);
+    }
+
+    render() {
+        for (let x = 0; x < this.pixelX; x++) {
+            for (let y = 0; y < this.pixelY; y++) {
+                const on = this.actor.state[x][y];
+                const led = this.leds[x * this.pixelY + y];
+                if (on) {
+                    const color = this.actor.state[x][y];
+                    led.material.color.set(color);
+                } else {
+                    led.material.color.set(0xFF0000);
+                }
+            }
+        }
+    }
+}
+
 class LEDActor {
     setup() {
         this.subscribe(this.id, "ledOn", "updateLed");
@@ -373,7 +466,7 @@ class LEDPawn {
 
         // if you try to increase the number of lights (change pixelX or pixelY), you may see the error:
         // Program Info Log: FRAGMENT shader uniforms count exceeds MAX_FRAGMENT_UNIFORM_VECTORS(1024)
-        // so comment out temporarily
+        // you can comment out it temporarily
         this.light = new THREE.PointLight(0x000000, 0, 3);
         this.led.add(this.light);
 
@@ -405,6 +498,11 @@ export default {
             name: "PixelDisplay",
             actorBehaviors: [PixelDisplayActor],
             pawnBehaviors: [PixelDisplayPawn]
+        },
+        {
+            name: "StripDisplay",
+            actorBehaviors: [StripDisplayActor],
+            pawnBehaviors: [StripDisplayPawn]
         },
         {
             name: "LED",
