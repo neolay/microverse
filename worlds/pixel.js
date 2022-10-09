@@ -71,5 +71,20 @@ export function init(Constants) {
                 pixelY: 16,
             },
         },
+        {
+            card: {
+                name: "pixel display",
+                behaviorModules: ["PixelDisplay"],
+                layers: ["pointer"],
+                type: "object",
+                translation: [0.2, 0.6, -16.87],
+                // rotation: [0, -Math.PI / 2, 0],
+                shadow: true,
+                scale: [1.75, 1.75, 1.75],
+                pixelX: 9,
+                pixelY: 9,
+                fullBright: true,
+            },
+        },
     ];
 }

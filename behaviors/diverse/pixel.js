@@ -103,7 +103,7 @@ class MbitDisplayPawn {
 
         const board = new THREE.Mesh(
             new THREE.BoxGeometry(boardWidth, boardHeight, boardDepth, 2, 2, 2),
-            new THREE.MeshBasicMaterial({color: 0x000000}),
+            new THREE.MeshBasicMaterial({color: 0x000000, toneMapped: false}),
         );
 
         this.shape.add(board);
@@ -195,14 +195,134 @@ class BagDisplayPawn {
 
         const board = new THREE.Mesh(
             new THREE.BoxGeometry(boardWidth, boardHeight, boardDepth, 2, 2, 2),
-            new THREE.MeshBasicMaterial({color: 0x000000}),
+            new THREE.MeshBasicMaterial({color: 0x000000, toneMapped: false}),
         );
 
         for (let x = 0; x < this.pixelX; x++) {
             for (let y = 0; y < this.pixelY; y++) {
                 const led = new THREE.Mesh(
                     new THREE.BoxGeometry(ledWidth, ledHeight, 0.1, 2, 2, 2),
-                    new THREE.MeshBasicMaterial({color: 0x000000}));
+                    new THREE.MeshBasicMaterial({color: 0x000000, toneMapped: false}));
+                const translation = [(2 * x + 1) / 2 * ledWidth + spacingCol * (x + 1) - boardWidth / 2,
+                    -(2 * y + 1) / 2 * ledHeight - spacingRow * (y + 1) + boardHeight / 2, 0];
+                led.position.set(translation[0], translation[1], translation[2]);
+                board.add(led);
+                this.leds.push(led);
+            }
+        }
+
+        this.shape.add(board);
+    }
+
+    render() {
+        for (let x = 0; x < this.pixelX; x++) {
+            for (let y = 0; y < this.pixelY; y++) {
+                const on = this.actor.state[x][y];
+                const led = this.leds[x * this.pixelY + y];
+                if (on) {
+                    const color = this.actor.state[x][y];
+                    led.material.color.set(color);
+                } else {
+                    led.material.color.set(0x000000);
+                }
+            }
+        }
+    }
+}
+
+class PixelDisplayActor {
+    setup() {
+        this.pixelX = this._cardData.pixelX || 16;
+        this.pixelY = this._cardData.pixelY || 16;
+        this.state = this.initialState(this.pixelX, this.pixelY);
+
+        this.image = {
+            0: [
+                [0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D],
+                [0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D],
+                [0xE1483D, 0xE1483D, 0xFFFFFF, 0xFFFFFF, 0xE1483D, 0xFFFFFF, 0xFFFFFF, 0xE1483D, 0xE1483D],
+                [0xE1483D, 0xFFFFFF, 0xF3C31F, 0xF3C31F, 0xFFFFFF, 0xF3C31F, 0xF3C31F, 0xFFFFFF, 0xE1483D],
+                [0xE1483D, 0xFFFFFF, 0xF3C31F, 0xF3C31F, 0xFFFFFF, 0xF3C31F, 0xF3C31F, 0xFFFFFF, 0xE1483D],
+                [0xE1483D, 0xFFFFFF, 0xF3C31F, 0xF3C31F, 0xFFFFFF, 0xF3C31F, 0xF3C31F, 0xFFFFFF, 0xE1483D],
+                [0xE1483D, 0xFFFFFF, 0xFFFFFF, 0xF3C31F, 0xF3C31F, 0xF3C31F, 0xFFFFFF, 0xFFFFFF, 0xE1483D],
+                [0xE1483D, 0xFFFFFF, 0xFFFFFF, 0xF3C31F, 0xF3C31F, 0xF3C31F, 0xFFFFFF, 0xFFFFFF, 0xE1483D],
+                [0xE1483D, 0xE1483D, 0xE1483D, 0xFFFFFF, 0xFFFFFF, 0xFFFFFF, 0xE1483D, 0xE1483D, 0xE1483D],
+            ],
+            1: [
+                [0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D],
+                [0xE1483D, 0xE1483D, 0xFFFFFF, 0xFFFFFF, 0xE1483D, 0xFFFFFF, 0xFFFFFF, 0xE1483D, 0xE1483D],
+                [0xE1483D, 0xFFFFFF, 0xF3C31F, 0xF3C31F, 0xFFFFFF, 0xF3C31F, 0xF3C31F, 0xFFFFFF, 0xE1483D],
+                [0xE1483D, 0xFFFFFF, 0xF3C31F, 0xF3C31F, 0xFFFFFF, 0xF3C31F, 0xF3C31F, 0xFFFFFF, 0xE1483D],
+                [0xE1483D, 0xFFFFFF, 0xF3C31F, 0xF3C31F, 0xFFFFFF, 0xF3C31F, 0xF3C31F, 0xFFFFFF, 0xE1483D],
+                [0xE1483D, 0xFFFFFF, 0xFFFFFF, 0xF3C31F, 0xF3C31F, 0xF3C31F, 0xFFFFFF, 0xFFFFFF, 0xE1483D],
+                [0xE1483D, 0xFFFFFF, 0xFFFFFF, 0xF3C31F, 0xF3C31F, 0xF3C31F, 0xFFFFFF, 0xFFFFFF, 0xE1483D],
+                [0xE1483D, 0xE1483D, 0xE1483D, 0xFFFFFF, 0xFFFFFF, 0xFFFFFF, 0xE1483D, 0xE1483D, 0xE1483D],
+                [0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D, 0xE1483D],
+            ],
+        }
+
+        this.throb();
+    }
+
+    initialState(x, y) {
+        return new Array(x).fill(0).map(() => new Array(y).fill(0));
+    }
+
+    setPixel(x, y, color) {
+        this.state[x][y] = color;
+        // console.log("setPixel", this.state);
+    }
+
+    show(image) {
+        for (let x = 0; x < this.pixelX; x++) {
+            for (let y = 0; y < this.pixelY; y++) {
+                this.state[x][y] = image[y][x];
+            }
+        }
+        this.say("render");
+        // console.log(this.state);
+    }
+
+    throb() {
+        const delay = 500;
+        this.show(this.image[0]);
+        this.future(delay).show(this.image[1]);
+        this.future(delay * 2).throb();
+    }
+}
+
+class PixelDisplayPawn {
+    setup() {
+        this.generatePixel();
+
+        this.render();
+        this.listen("render", "render");
+    }
+
+    generatePixel() {
+        const THREE = Microverse.THREE;
+
+        this.leds = [];
+        this.pixelX = this.actor._cardData.pixelX || 16;
+        this.pixelY = this.actor._cardData.pixelY || 16;
+        const spacingCol = this.actor._cardData.spacingCol || 0.05;
+        const spacingRow = this.actor._cardData.spacingRow || 0.05;
+        const ledWidth = this.actor._cardData.ledWidth || 0.2;
+        const ledHeight = this.actor._cardData.ledHeight || 0.2;
+        const boardWidth = this.actor._cardData.width ||= ledWidth * this.pixelX + spacingCol * (this.pixelX + 1);
+        const boardHeight = this.actor._cardData.height ||= ledHeight * this.pixelY + spacingRow * (this.pixelY + 1);
+        const boardDepth = this.actor._cardData.depth ||= 0.05;
+
+        const board = new THREE.Mesh(
+            new THREE.BoxGeometry(boardWidth, boardHeight, boardDepth, 2, 2, 2),
+            new THREE.MeshBasicMaterial({color: 0x000000, toneMapped: false}),
+        );
+
+        for (let x = 0; x < this.pixelX; x++) {
+            for (let y = 0; y < this.pixelY; y++) {
+                const led = new THREE.Mesh(
+                    new THREE.BoxGeometry(ledWidth, ledHeight, 0.1, 2, 2, 2),
+                    new THREE.MeshBasicMaterial({color: 0x000000, toneMapped: false}));
                 const translation = [(2 * x + 1) / 2 * ledWidth + spacingCol * (x + 1) - boardWidth / 2,
                     -(2 * y + 1) / 2 * ledHeight - spacingRow * (y + 1) + boardHeight / 2, 0];
                 led.position.set(translation[0], translation[1], translation[2]);
@@ -249,7 +369,7 @@ class LEDPawn {
 
         this.led = new THREE.Mesh(
             new THREE.BoxGeometry(width, height, 0.1, 2, 2, 2),
-            new THREE.MeshBasicMaterial({color: 0x000000}));
+            new THREE.MeshBasicMaterial({color: 0x000000, toneMapped: false}));
 
         // if you try to increase the number of lights (change pixelX or pixelY), you may see the error:
         // Program Info Log: FRAGMENT shader uniforms count exceeds MAX_FRAGMENT_UNIFORM_VECTORS(1024)
@@ -280,6 +400,11 @@ export default {
             name: "BagDisplay",
             actorBehaviors: [BagDisplayActor],
             pawnBehaviors: [BagDisplayPawn]
+        },
+        {
+            name: "PixelDisplay",
+            actorBehaviors: [PixelDisplayActor],
+            pawnBehaviors: [PixelDisplayPawn]
         },
         {
             name: "LED",
