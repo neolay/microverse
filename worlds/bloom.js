@@ -20,7 +20,7 @@ export function init(Constants) {
         {
             card: {
                 name: "world model",
-                behaviorModules: ["Floor"], // "BloomPass"
+                behaviorModules: ["Floor", "BloomPass"], // "BloomPass"
                 layers: ["walk"],
                 type: "object",
                 translation: [0, -2, 0],
