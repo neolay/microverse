@@ -45,7 +45,7 @@ class MbitDisplayActor {
             for (let y = 0; y < this.pixelY; y++) {
                 const led = this.createCard({
                     translation: [(2 * x + 1) / 2 * ledWidth + spacingCol * (x + 1) - boardWidth / 2,
-                        -(2 * y + 1) / 2 * ledHeight - spacingRow * (y + 1) + boardHeight / 2, 0],
+                        -(2 * y + 1) / 2 * ledHeight - spacingRow * (y + 1) + boardHeight / 2, boardDepth],
                     name: `led-${x}-${y}`,
                     behaviorModules: ["LED"],
                     parent: this,
@@ -103,7 +103,7 @@ class MbitDisplayPawn {
 
         const board = new THREE.Mesh(
             new THREE.BoxGeometry(boardWidth, boardHeight, boardDepth, 2, 2, 2),
-            new THREE.MeshBasicMaterial({color: 0x000000, toneMapped: false}),
+            new THREE.MeshStandardMaterial({color: 0x000000, toneMapped: false}),
         );
 
         this.shape.add(board);
@@ -207,7 +207,7 @@ class BagDisplayPawn {
                     new THREE.BoxGeometry(ledWidth, ledHeight, 0.1, 2, 2, 2),
                     new THREE.MeshBasicMaterial({color: 0x000000, toneMapped: false}));
                 const translation = [(2 * x + 1) / 2 * ledWidth + spacingCol * (x + 1) - boardWidth / 2,
-                    -(2 * y + 1) / 2 * ledHeight - spacingRow * (y + 1) + boardHeight / 2, 0];
+                    -(2 * y + 1) / 2 * ledHeight - spacingRow * (y + 1) + boardHeight / 2, boardDepth];
                 led.position.set(translation[0], translation[1], translation[2]);
                 board.add(led);
                 this.leds.push(led);
@@ -327,7 +327,7 @@ class PixelDisplayPawn {
                     new THREE.BoxGeometry(ledWidth, ledHeight, 0.1, 2, 2, 2),
                     new THREE.MeshBasicMaterial({color: 0x000000, toneMapped: false}));
                 const translation = [(2 * x + 1) / 2 * ledWidth + spacingCol * (x + 1) - boardWidth / 2,
-                    -(2 * y + 1) / 2 * ledHeight - spacingRow * (y + 1) + boardHeight / 2, 0];
+                    -(2 * y + 1) / 2 * ledHeight - spacingRow * (y + 1) + boardHeight / 2, boardDepth];
                 led.position.set(translation[0], translation[1], translation[2]);
                 board.add(led);
                 this.leds.push(led);
@@ -550,7 +550,7 @@ class StripDisplayPawn {
                     new THREE.BoxGeometry(ledWidth, ledHeight, 0.1, 2, 2, 2),
                     new THREE.MeshBasicMaterial({color: 0x000000, toneMapped: false}));
                 const translation = [(2 * x + 1) / 2 * ledWidth + spacingCol * (x + 1) - boardWidth / 2,
-                    -(2 * y + 1) / 2 * ledHeight - spacingRow * (y + 1) + boardHeight / 2, 0];
+                    -(2 * y + 1) / 2 * ledHeight - spacingRow * (y + 1) + boardHeight / 2, boardDepth];
                 led.position.set(translation[0], translation[1], translation[2]);
                 board.add(led);
                 this.leds.push(led);
@@ -600,7 +600,7 @@ class LEDPawn {
         // if you try to increase the number of lights (change pixelX or pixelY), you may see the error:
         // Program Info Log: FRAGMENT shader uniforms count exceeds MAX_FRAGMENT_UNIFORM_VECTORS(1024)
         // you can comment out it temporarily
-        this.light = new THREE.PointLight(0x000000, 0, 3);
+        this.light = new THREE.PointLight(0x000000, 0, 2);
         this.led.add(this.light);
 
         this.shape.add(this.led);
