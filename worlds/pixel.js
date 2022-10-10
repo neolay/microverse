@@ -5,18 +5,18 @@ export function init(Constants) {
 
     Constants.UserBehaviorDirectory = "behaviors/diverse";
     Constants.UserBehaviorModules = [
-        "lights.js", "sound.js", "throb.js", "urlLink.js", "bounce.js", "simpleSpin.js", "text3D.js", "script.js", "flag.js", "pixel.js"
+        "lights.js", "sound.js", "throb.js", "urlLink.js", "bounce.js", "simpleSpin.js", "text3D.js", "script.js", "flag.js", "pixel.js", "forklift.js"
     ];
 
     Constants.DefaultCards = [
-        // {
-        //     card: {
-        //         name: "entrance",
-        //         type: "object",
-        //         translation: [0, 0.4, 2],
-        //         spawn: "default",
-        //     }
-        // },
+        {
+            card: {
+                name: "entrance",
+                type: "object",
+                translation: [0, 0.4, 12],
+                spawn: "default",
+            }
+        },
         {
             card: {
                 name: "world model",
@@ -100,6 +100,22 @@ export function init(Constants) {
                 ledWidth: 0.15,
                 ledHeight: 0.15,
             },
+        },
+        {
+            card: {
+                name: "forklift",
+                dataTranslation: [0, -1.65, 0],
+                translation: [0, 0, 0],
+                dataScale: [1.2, 1.2, 1.2],
+                behaviorModules: ["ForkLift"],
+                layers: ["pointer"],
+                dataLocation: "3UkowQroW_SGvJ0N4hXnZO_pwIEEVlVQNTvj8CJ0CG78PSEhJSZvenozPDkwJnsgJns2JzokIDAhezw6eiB6EjEDNyw5HCYUPgQ2Fw0xZhItNCMsIgAeAgwMZ3o8Ons2JzokIDAhezg8Nic6IzAnJjB6YBAAGSIZES8PHCcNBAVhIhlkbScSITQYHhliDR8SNy0DFz8gFAo7PAcTPnoxNCE0enhkF3gzEjxsDQYaIhwTYDsfGjkHMz84OCMTCjcjPzIfF3gkNzYgEyUtGzI",
+                pathIndex: 1,
+                modelType: "glb",
+                shadow: true,
+                singleSided: true,
+                type: "3d",
+            }
         },
     ];
 }
