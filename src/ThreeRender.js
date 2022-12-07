@@ -22,6 +22,7 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
+import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
 import { XRControllerModelFactory } from 'three/examples/jsm//webxr/XRControllerModelFactory.js';
 
 import { PM_Visible, PM_Camera, RenderManager } from "@croquet/worldcore-kernel";
@@ -289,7 +290,9 @@ class XRController {
                 geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, - 1 ], 3));
                 geometry.setAttribute('color', new THREE.Float32BufferAttribute([0.5, 0.5, 0.5, 0, 0, 0], 3));
                 material = new THREE.LineBasicMaterial({vertexColors: true, blending: THREE.AdditiveBlending});
-                return new THREE.Line(geometry, material);
+                const line = new THREE.Line(geometry, material);
+                line.scale.z = 5;
+                return line;
             case 'gaze':
                 geometry = new THREE.RingGeometry(0.02, 0.04, 32).translate(0, 0, -1);
                 material = new THREE.MeshBasicMaterial({opacity: 0.5, transparent: true});
@@ -374,8 +377,8 @@ class ThreeRenderManager extends RenderManager {
             this.renderer.dispose();
         }
 
-        if (this.vrButton) {
-            this.vrButton.remove();
+        if (this.arButton) {
+            this.arButton.remove();
         }
 
         if (this.canvas) {
@@ -387,7 +390,7 @@ class ThreeRenderManager extends RenderManager {
 
         this.hasXR().then((xr) => {
             if (xr) {
-                this.vrButton = VRButton.createButton(this.renderer);
+                this.arButton = ARButton.createButton(this.renderer);
                 let styleCallback = (records, _observer) => {
                     let styleChanged = false;
 
@@ -398,10 +401,10 @@ class ThreeRenderManager extends RenderManager {
                         }
                     }
                     if (styleChanged) {
-                        if (this.vrButton.textContent === "ENTER VR") {
-                            if (this.vrButton.style.left) {
-                                this.vrButton.style.removeProperty("left");
-                                this.vrButton.style.setProperty("right", "20px");
+                        if (this.arButton.textContent === "START AR") {
+                            if (this.arButton.style.left) {
+                                this.arButton.style.removeProperty("left");
+                                this.arButton.style.setProperty("right", "20px");
                             }
                         }
                     }
@@ -411,9 +414,9 @@ class ThreeRenderManager extends RenderManager {
                     this.observer = null;
                 }
                 this.observer = new MutationObserver(styleCallback);
-                this.observer.observe(this.vrButton, {attributes: true, attributeFilter: ["style"]});
+                this.observer.observe(this.arButton, {attributes: true, attributeFilter: ["style"]});
 
-                document.body.appendChild(this.vrButton);
+                document.body.appendChild(this.arButton);
                 this.renderer.xr.enabled = true;
                 this.xrController = new XRController(this);
             } else {
