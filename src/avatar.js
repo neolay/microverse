@@ -1998,6 +1998,13 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
                 this.publish(this.actor.id, "removeGizmo");
             }
         }
+
+        if (e.shiftKey) {
+            const doEditor = this.actor.behaviorManager.modules.get("BlocksEditor");
+            if (pawn && doEditor) {
+                pawn.openEditor();
+            }
+        }
     }
 
     pointerMove(e) {
