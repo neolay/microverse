@@ -42,6 +42,9 @@ export class CardActor extends mix(Actor).with(AM_Smoothed, AM_PointerTarget, AM
         this.scriptListeners = new Map();
         super.init(cardOptions);
         this._cardData = cardData;
+        this._initialData = {
+            scale: this.scale,
+        };
         this.noSave = options.noSave;
         this.createShape(cardData);
         this.listen("selectEdit", this.saySelectEdit);
@@ -1273,6 +1276,10 @@ export class CardPawn extends mix(Pawn).with(PM_Smoothed, PM_ThreeVisible, PM_Po
 
     showControls(actorInfo) {
         this.say("showControls", actorInfo);
+    }
+
+    openEditor() {
+        this.call("BlocksEditor$BlocksEditorPawn", "setEditor");
     }
 
     // compute and return the position and distance the avatar should jump to to see the card full screen
