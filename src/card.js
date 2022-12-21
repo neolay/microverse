@@ -54,11 +54,6 @@ export class CardActor extends mix(Actor).with(AM_Smoothed, AM_PointerTarget, AM
 
         // this.listen("dataScaleComputed", this.dataScaleComputed);
         this.listen("setAnimationClipIndex", this.setAnimationClipIndex);
-        
-        if (this.layers && this.layers.includes('pointer')){
-            this.call("BlocksEditor$BlocksEditorPawn", "tick");
-        }
-        
     }
 
     destroy() {
@@ -515,6 +510,10 @@ export class CardPawn extends mix(Pawn).with(PM_Smoothed, PM_ThreeVisible, PM_Po
         this.subscribe(this.id, "3dModelLoaded", this.tryStartAnimation);
         this.constructCard();
         this._editMode = false; // used to determine if we should ignore pointer events
+
+        if (this.actor.layers && this.actor.layers.includes('pointer')){
+            this.call("BlocksEditor$BlocksEditorPawn", "tick");
+        }
     }
 
     sayDeck(message, vars) {
