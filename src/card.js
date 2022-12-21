@@ -54,7 +54,11 @@ export class CardActor extends mix(Actor).with(AM_Smoothed, AM_PointerTarget, AM
 
         // this.listen("dataScaleComputed", this.dataScaleComputed);
         this.listen("setAnimationClipIndex", this.setAnimationClipIndex);
-        this.call("BlocksEditor$BlocksEditorActor", "tick");
+        
+        if (this.layers && this.layers.includes('pointer')){
+            this.call("BlocksEditor$BlocksEditorPawn", "tick");
+        }
+        
     }
 
     destroy() {
