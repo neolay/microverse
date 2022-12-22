@@ -1286,6 +1286,10 @@ export class CardPawn extends mix(Pawn).with(PM_Smoothed, PM_ThreeVisible, PM_Po
         this.call("BlocksEditor$BlocksEditorPawn", "setEditor");
     }
 
+    broadcastClick() {
+        this.call("BlocksEditor$BlocksEditorPawn", "broadcastClick");
+    }
+
     // compute and return the position and distance the avatar should jump to to see the card full screen
     getJumpToPose() {
         if(!this.isFlat) return null;
