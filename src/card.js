@@ -511,8 +511,11 @@ export class CardPawn extends mix(Pawn).with(PM_Smoothed, PM_ThreeVisible, PM_Po
         this.constructCard();
         this._editMode = false; // used to determine if we should ignore pointer events
 
-        if (this.actor.layers && this.actor.layers.includes('pointer')){
-            this.call("BlocksEditor$BlocksEditorPawn", "tick");
+        const module = this.actor.behaviorManager.modules.get("BlocksEditor");
+        if (module) {
+            if (this.actor.layers && this.actor.layers.includes('pointer')) {
+                this.call("BlocksEditor$BlocksEditorPawn", "tick");
+            }
         }
     }
 
