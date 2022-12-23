@@ -58,6 +58,7 @@ export class CardActor extends mix(Actor).with(AM_Smoothed, AM_PointerTarget, AM
 
     destroy() {
         this.publish("actorManager", "destroyed", this.id);
+        this.publish("removeSprite", "removeSprite", `${this.name}-${this.id}`);
         super.destroy();
     }
 
@@ -511,11 +512,25 @@ export class CardPawn extends mix(Pawn).with(PM_Smoothed, PM_ThreeVisible, PM_Po
         this.constructCard();
         this._editMode = false; // used to determine if we should ignore pointer events
 
+        this.addSprite();
         const module = this.actor.behaviorManager.modules.get("BlocksEditor");
         if (module) {
             if (this.actor.layers && this.actor.layers.includes('pointer')) {
                 this.call("BlocksEditor$BlocksEditorPawn", "tick");
             }
+        }
+    }
+
+    addSprite() {
+        const ide = window.world?.children[0];
+        if (ide && this.actor.layers.includes("pointer")) {
+            const sprite = new SpriteMorph(ide.globalVariables);
+            const spriteName = `${this.actor.name}-${this.actor.id}`;
+            sprite.name = ide.newSpriteName(spriteName);
+            ide.stage.add(sprite);
+            ide.sprites.add(sprite);
+            ide.corral.addSprite(sprite);
+            sprite.variables.addVar("_ActorData");
         }
     }
 
