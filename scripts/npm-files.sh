@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 cd `dirname "$0"`/..
 
@@ -37,5 +37,15 @@ cp npm/package.json ${DIST}/package.json
 cp npm/install.js ${DIST}/install.js
 cp npm/gitignore ${DIST}/gitignore
 
-sed -i '' 's/<!--//g' ${DIST}/index.html
-sed -i '' 's/-->//g' ${DIST}/index.html
+
+os=$(uname)
+
+if [ "$os" == "Darwin" ]; then
+    sed -i '' 's/<!--//g' ${DIST}/index.html
+    sed -i '' 's/-->//g' ${DIST}/index.html
+elif [ "$os" == "Linux" ]; then
+    sed -i 's/<!--//g' ${DIST}/index.html
+    sed -i 's/-->//g' ${DIST}/index.html
+else
+    echo "Currently only macos and linux are supported"
+fi
