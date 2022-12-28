@@ -65,7 +65,7 @@ const config = {
                 { from: 'meta/version.txt', to: 'meta/version.txt'},
                 { from: 'apiKey.js', noErrorOnMissing: true },
                 { from: 'apiKey-dev.js', noErrorOnMissing: true },
-                { from: '../Snap/src/*.js', to: 'lib/snap/'},
+                { from: '../Snap/src/*.js', to: 'lib/snap/src/[name][ext]', toType: 'template'},
                 { from: '../Snap/locale/lang-zh_CN.js', to: 'lib/snap/locale/lang-zh_CN.js'},
             ]
         })
