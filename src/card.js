@@ -61,7 +61,7 @@ export class CardActor extends mix(Actor).with(AM_Smoothed, AM_PointerTarget, AM
 
     destroy() {
         this.publish("actorManager", "destroyed", this.id);
-        this.publish("removeSprite", "removeSprite", `${this.name}-${this.id}`);
+        this.publish("spriteManager", "removeSprite", `${this.name}-${this.id}`);
         super.destroy();
     }
 
@@ -571,14 +571,13 @@ export class CardPawn extends mix(Pawn).with(PM_Smoothed, PM_ThreeVisible, PM_Po
         this._editMode = false; // used to determine if we should ignore pointer events
 
         this.addSprite();
-        /*
+
         const module = this.actor.behaviorManager.modules.get("BlocksEditor");
         if (module) {
-            if (this.actor.layers && this.actor.layers.includes('pointer')) {
-                this.call("BlocksEditor$BlocksEditorPawn", "tick");
+            if (this.actor.layers && this.actor.layers.includes("pointer", "clone")) {
+                this.call("BlocksEditor$BlocksEditorPawn", "makeSubscriptions");
             }
         }
-        */
     }
 
     addSprite() {
