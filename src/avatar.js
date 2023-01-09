@@ -2004,11 +2004,6 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
             if (pawn && doEditor) {
                 pawn.openEditor();
             }
-        } else {
-            const doEditor = this.actor.behaviorManager.modules.get("BlocksEditor");
-            if (pawn && doEditor) {
-                pawn.broadcastClick();
-            }
         }
     }
 
