@@ -26,6 +26,10 @@ import { XRControllerModelFactory } from 'three/examples/jsm//webxr/XRController
 
 import { PM_Visible, PM_Camera, RenderManager } from "@croquet/worldcore-kernel";
 
+export const _xAxis = [1, 0, 0];
+export const _yAxis = [0, 1, 0];
+export const _zAxis = [0, 0, 1];
+
 //------------------------------------------------------------------------------------------
 //-- ThreeVisible  -------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------
