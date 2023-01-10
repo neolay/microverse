@@ -65,6 +65,31 @@ export class CardActor extends mix(Actor).with(AM_Smoothed, AM_PointerTarget, AM
         super.destroy();
     }
 
+    isBlocksUserCard() {
+        let result = false;
+        if (this.behaviorManager.hasBehavior("BlocksGUI")) {
+            const behaviorModules = this._behaviorModules;
+            if (this.layers.includes("pointer")) {
+                if (behaviorModules) {
+                    if (!this.hasSystemModule()) {
+                        result = true;
+                    }
+                } else {
+                    if (!(this instanceof TextFieldActor || this.parent instanceof TextFieldActor)) {
+                        result = true;
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    hasSystemModule() {
+        return this._behaviorModules.some(moduleName =>
+            this.behaviorManager.modules.get(moduleName).systemModule
+        );
+    }
+
     separateOptions(options) {
         // options are either intrinsic or non-intrinsic. We store non-intrinsic values in _cardData.
         let cardOptions = {};
@@ -569,27 +594,28 @@ export class CardPawn extends mix(Pawn).with(PM_Smoothed, PM_ThreeVisible, PM_Po
         this.subscribe(this.id, "3dModelLoaded", this.tryStartAnimation);
         this.constructCard();
         this._editMode = false; // used to determine if we should ignore pointer events
+        this.initBlocks();
+    }
 
-        this.addSprite();
-
-        const module = this.actor.behaviorManager.modules.get("BlocksEditor");
-        if (module) {
-            if (this.actor.layers && this.actor.layers.includes("pointer", "clone")) {
-                this.call("BlocksEditor$BlocksEditorPawn", "makeSubscriptions");
+    addSprite(actor) {
+        const ide = window.world?.children[0];
+        if (ide) {
+            const spriteName = `${actor.name}-${actor.id}`;
+            const existing = ide.sprites.asArray().filter((morph) => morph.name === spriteName)[0];
+            if (!existing) {
+                const sprite = new SpriteMorph(ide.globalVariables);
+                sprite.name = ide.newSpriteName(spriteName);
+                sprite.card = actor;
+                ide.stage.add(sprite);
+                ide.sprites.add(sprite);
+                ide.corral.addSprite(sprite);
             }
         }
     }
 
-    addSprite() {
-        const ide = window.world?.children[0];
-        if (ide && this.actor.layers.includes("pointer")) {
-            const sprite = new SpriteMorph(ide.globalVariables);
-            const spriteName = `${this.actor.name}-${this.actor.id}`;
-            sprite.name = ide.newSpriteName(spriteName);
-            ide.stage.add(sprite);
-            ide.sprites.add(sprite);
-            ide.corral.addSprite(sprite);
-            sprite.variables.addVar("_ActorData");
+    initBlocks() {
+        if (this.actor.isBlocksUserCard()) {
+            this.addSprite(this.actor);
         }
     }
 
