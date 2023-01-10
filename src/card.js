@@ -56,7 +56,7 @@ export class CardActor extends mix(Actor).with(AM_Smoothed, AM_PointerTarget, AM
         this.listen("setAnimationClipIndex", this.setAnimationClipIndex);
         // for dynaverse
         this.listen("_bubbleSay", this._bubbleSay);
-
+        this.initBlocks();
     }
 
     destroy() {
@@ -88,6 +88,12 @@ export class CardActor extends mix(Actor).with(AM_Smoothed, AM_PointerTarget, AM
         return this._behaviorModules.some(moduleName =>
             this.behaviorManager.modules.get(moduleName).systemModule
         );
+    }
+
+    initBlocks() {
+        if (this.isBlocksUserCard()) {
+            this.call("BlocksHandler$BlocksHandlerActor", "setup");
+        }
     }
 
     separateOptions(options) {
@@ -617,6 +623,7 @@ export class CardPawn extends mix(Pawn).with(PM_Smoothed, PM_ThreeVisible, PM_Po
 
     initBlocks() {
         if (this.actor.isBlocksUserCard()) {
+            this.call("BlocksHandler$BlocksHandlerPawn", "setup");
             this.addSprite(this.actor);
         }
     }
