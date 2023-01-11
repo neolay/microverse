@@ -62,7 +62,7 @@ export class CardActor extends mix(Actor).with(AM_Smoothed, AM_PointerTarget, AM
     destroy() {
         this.publish("actorManager", "destroyed", this.id);
         if (this.isBlocksUserCard && !this.layers.includes("clone")) {
-            this.publish("spriteManager", "removeSprite", `${this.name}-${this.id}`);
+            this.publish("spriteManager", "removeSprite", this.spriteName);
         }
         super.destroy();
     }
@@ -94,6 +94,7 @@ export class CardActor extends mix(Actor).with(AM_Smoothed, AM_PointerTarget, AM
 
     initBlocks() {
         if (this.isBlocksUserCard()) {
+            this.spriteName = `${this.name}-${this.id}`;
             this.call("BlocksHandler$BlocksHandlerActor", "setup");
         }
     }
