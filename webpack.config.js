@@ -67,7 +67,7 @@ const config = {
                 { from: 'apiKey-dev.js', noErrorOnMissing: true },
                 { from: '../Snap/src/*.js', to: 'lib/blocks/core/[name][ext]', toType: 'template'},
                 { from: '../Snap/extras/*.js', to: 'lib/blocks/extras/[name][ext]', toType: 'template'},
-                { from: '../Snap/libraries/*', to: 'lib/snap/libraries/[name][ext]', toType: 'template'},
+                { from: '../Snap/libraries/*', to: 'lib/blocks/libraries/[name][ext]', toType: 'template'},
                 { from: '../Snap/locale/lang-zh_CN.js', to: 'lib/blocks/locale/lang-zh_CN.js'},
             ]
         })
