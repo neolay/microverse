@@ -606,15 +606,15 @@ export class CardPawn extends mix(Pawn).with(PM_Smoothed, PM_ThreeVisible, PM_Po
         this.initBlocks();
     }
 
-    addSprite(actor) {
+    addSprite(pawn) {
         const ide = window.world?.children[0];
         if (ide) {
-            const spriteName = `${actor.name}-${actor.id}`;
+            const spriteName = `${pawn.actor.name}-${pawn.actor.id}`;
             const existing = ide.sprites.asArray().filter((morph) => morph.name === spriteName)[0];
             if (!existing) {
                 const sprite = new SpriteMorph(ide.globalVariables);
                 sprite.name = ide.newSpriteName(spriteName);
-                sprite.card = actor;
+                sprite.cardPawn = pawn;
                 ide.stage.add(sprite);
                 ide.sprites.add(sprite);
                 ide.corral.addSprite(sprite);
@@ -626,7 +626,7 @@ export class CardPawn extends mix(Pawn).with(PM_Smoothed, PM_ThreeVisible, PM_Po
         if (this.actor.isBlocksUserCard()) {
             this.call("BlocksHandler$BlocksHandlerPawn", "setup");
             if (!this.actor.layers.includes("clone")) {
-                this.addSprite(this.actor);
+                this.addSprite(this);
             }
         }
     }
