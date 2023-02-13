@@ -1139,7 +1139,9 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
             let c = document.createElement("div");
             c.innerHTML = `<div id="userCountDisplay"><div id="userCountReadout">0</div></div>`;
             userCountDisplay = c.firstChild;
-            document.body.appendChild(userCountDisplay);
+            if (!window.world?.children[0]) {
+                document.body.appendChild(userCountDisplay);
+            }
 
             if (this.service("DolbyChatManager") && window.innerWidth >= 600) {
                 userCountDisplay.style.left = "40%";
