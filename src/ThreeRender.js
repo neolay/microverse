@@ -403,12 +403,19 @@ class ThreeRenderManager extends RenderManager {
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 10000);
 
+        this.isDynaverse = !!window.world?.children[0];
+
         if (!options.canvas) {
             this.canvas = document.createElement("canvas");
             this.canvas.id = "ThreeCanvas";
             this.canvas.style.cssText = "position: absolute; left: 0; top: 0; z-index: 0";
-            document.body.insertBefore(this.canvas, null);
-            options.canvas = this.canvas;
+            if (this.isDynaverse) {
+                this.canvas.width = 480;
+                this.canvas.height = 360;
+            } else {
+                document.body.insertBefore(this.canvas, null);
+                options.canvas = this.canvas;
+            }
         }
 
         this.setupRenderer(options);
@@ -423,7 +430,7 @@ class ThreeRenderManager extends RenderManager {
             this.vrButton.remove();
         }
 
-        if (this.canvas) {
+        if (this.canvas && !this.isDynaverse) {
             options.canvas = this.canvas;
         }
 
@@ -525,11 +532,20 @@ class ThreeRenderManager extends RenderManager {
     }
 
     resize() {
-        this.camera.aspect = window.innerWidth / window.innerHeight;
-        this.camera.updateProjectionMatrix();
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        if (this.composer) {
-            this.composer.setSize(window.innerWidth, window.innerHeight)
+        if (this.isDynaverse) {
+            this.camera.aspect = this.canvas.width / this.canvas.height;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(this.canvas.width, this.canvas.height);
+            if (this.composer) {
+                this.composer.setSize(this.canvas.width, this.canvas.height);
+            }
+        } else {
+            this.camera.aspect = window.innerWidth / window.innerHeight;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            if (this.composer) {
+                this.composer.setSize(window.innerWidth, window.innerHeight)
+            }
         }
     }
 
@@ -563,6 +579,12 @@ class ThreeRenderManager extends RenderManager {
             this.composer.render();
         } else {
             this.renderer.render(this.scene, this.camera);
+        }
+        if (this.isDynaverse) {
+            const ide = window.world.children[0];
+            if (!ide.stage.threeRenderer) {
+                ide.stage.threeRenderer = this.renderer;
+            }
         }
     }
 
