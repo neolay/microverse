@@ -410,8 +410,8 @@ class ThreeRenderManager extends RenderManager {
             this.canvas.id = "ThreeCanvas";
             this.canvas.style.cssText = "position: absolute; left: 0; top: 0; z-index: 0";
             if (this.isDynaverse) {
-                this.canvas.width = 480;
-                this.canvas.height = 360;
+                this.canvas.width = 720;
+                this.canvas.height = 540;
             } else {
                 document.body.insertBefore(this.canvas, null);
                 options.canvas = this.canvas;
