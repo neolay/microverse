@@ -584,6 +584,7 @@ class ThreeRenderManager extends RenderManager {
             const ide = window.world.children[0];
             if (!ide.stage.threeRenderer) {
                 ide.stage.threeRenderer = this.renderer;
+                ide.stage.inputManager = this.service("InputManager");
             }
         }
     }
