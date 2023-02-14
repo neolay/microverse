@@ -69,7 +69,7 @@ export class CardActor extends mix(Actor).with(AM_Smoothed, AM_PointerTarget, AM
 
     isBlocksUserCard() {
         let result = false;
-        if (this.behaviorManager.hasBehavior("BlocksGUI")) {
+        if (this.behaviorManager.hasBehavior("BlocksHandler")) {
             const behaviorModules = this._behaviorModules;
             if (this.layers.includes("pointer")) {
                 if (behaviorModules) {
@@ -401,7 +401,7 @@ export class CardActor extends mix(Actor).with(AM_Smoothed, AM_PointerTarget, AM
             parent: this,
             name: "left_speech_bubble",
             translation: [0, 2/this.scale[1], 0],
-            scale: [1/this.scale[0], 1/this.scale[1], 1/this.scale[1]], 
+            scale: [1/this.scale[0], 1/this.scale[1], 1/this.scale[1]],
             rotation: [0, 0, 0, 0], // face to avatar
             layers: ["pointer"],
             dataLocation: "30dblDwPt68R7LyP7sVMxmQh3WhY4f6BTttCqnb6i9DIWEREQEMKHx9WWVxVQx5FQx5TQl9BRVVEHllfH0UfSmVER2B_SnZFf2MBe1lXfWpZBQMJSHZ0dwgAAh9ZXx5TQl9BRVVEHl1ZU0JfRlVCQ1UeXF9TUVxUVUZUVVZRRVxEH2J7Q0BSSWhmb0hySlp-fkgCBFFccnxpVklSfEUHU29mRHZqdXdaCWJnVggfVFFEUR8HdFMGc1lXf2FnU0J2WngGQFNeBkVkWgRUeVl0ZwBBA0RqRkdfZmlkZEF9",
