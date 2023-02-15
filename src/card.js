@@ -81,6 +81,9 @@ export class CardActor extends mix(Actor).with(AM_Smoothed, AM_PointerTarget, AM
                         result = true;
                     }
                 }
+                if (this._cardData.spawn) {
+                    result = false;
+                }
             }
         }
         return result;
