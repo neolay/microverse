@@ -112,8 +112,15 @@ const PM_ThreeCamera = superclass => class extends PM_Camera(superclass) {
     }
 
     setRayCast(xy) {
-        const x = ( xy[0] / window.innerWidth ) * 2 - 1;
-        const y = - ( xy[1] / window.innerHeight ) * 2 + 1;
+        let x, y;
+        const ide = window.world.children[0];
+        if (ide) {
+            x = ((xy[0] - ide.stage.topLeft().x) / ide.stage.width()) * 2 - 1;
+            y = -((xy[1] - ide.stage.topLeft().y) / ide.stage.height()) * 2 + 1;
+        } else {
+            x = (xy[0] / window.innerWidth) * 2 - 1;
+            y = -(xy[1] / window.innerHeight) * 2 + 1;
+        }
         const render = this.service("ThreeRenderManager");
         if (!this.raycaster) this.raycaster = new THREE.Raycaster();
         this.raycaster.setFromCamera({x: x, y: y}, render.camera);
@@ -580,6 +587,7 @@ class ThreeRenderManager extends RenderManager {
             if (!ide.stage.threeRenderManager) {
                 ide.stage.threeRenderManager = this;
                 ide.stage.inputManager = this.service("InputManager");
+                ide.stage.addAllListeners();
             }
         }
     }
