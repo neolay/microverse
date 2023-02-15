@@ -409,10 +409,7 @@ class ThreeRenderManager extends RenderManager {
             this.canvas = document.createElement("canvas");
             this.canvas.id = "ThreeCanvas";
             this.canvas.style.cssText = "position: absolute; left: 0; top: 0; z-index: 0";
-            if (this.isDynaverse) {
-                this.canvas.width = 720;
-                this.canvas.height = 540;
-            } else {
+            if (!this.isDynaverse) {
                 document.body.insertBefore(this.canvas, null);
                 options.canvas = this.canvas;
             }
@@ -532,20 +529,18 @@ class ThreeRenderManager extends RenderManager {
     }
 
     resize() {
+        let width, height;
         if (this.isDynaverse) {
-            this.camera.aspect = this.canvas.width / this.canvas.height;
-            this.camera.updateProjectionMatrix();
-            this.renderer.setSize(this.canvas.width, this.canvas.height);
-            if (this.composer) {
-                this.composer.setSize(this.canvas.width, this.canvas.height);
-            }
+            const ide = window.world.children[0];
+            [width, height] = [ide.stage.width(), ide.stage.height()];
         } else {
-            this.camera.aspect = window.innerWidth / window.innerHeight;
-            this.camera.updateProjectionMatrix();
-            this.renderer.setSize(window.innerWidth, window.innerHeight);
-            if (this.composer) {
-                this.composer.setSize(window.innerWidth, window.innerHeight)
-            }
+            [width, height] = [window.innerWidth, window.innerHeight];
+        }
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(width, height);
+        if (this.composer) {
+            this.composer.setSize(width, height);
         }
     }
 
@@ -582,8 +577,8 @@ class ThreeRenderManager extends RenderManager {
         }
         if (this.isDynaverse) {
             const ide = window.world.children[0];
-            if (!ide.stage.threeRenderer) {
-                ide.stage.threeRenderer = this.renderer;
+            if (!ide.stage.threeRenderManager) {
+                ide.stage.threeRenderManager = this;
                 ide.stage.inputManager = this.service("InputManager");
             }
         }
