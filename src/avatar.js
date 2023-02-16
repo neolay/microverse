@@ -925,6 +925,9 @@ export class AvatarPawn extends mix(CardPawn).with(PM_Player, PM_SmoothedDriver,
         this.subscribe("playerManager", "presentationStarted", this.presentationStarted);
         this.subscribe("playerManager", "presentationStopped", this.presentationStopped);
 
+        this.subscribe("joyStickMorph", "updateMotion", ([dx, dy]) => this.updateMotion(dx, dy));
+        this.subscribe("joyStickMorph", "endMotion", this.endMotion);
+
         this.wasdVelocity = [0, 0, 0];
         this.wasdMap = {w: false, a: false, d: false, s: false};
 

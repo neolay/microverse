@@ -589,6 +589,9 @@ class ThreeRenderManager extends RenderManager {
                 ide.stage.inputManager = this.service("InputManager");
                 ide.stage.addAllListeners();
             }
+            if (!ide.stage.joyStick) {
+                ide.stage.createJoyStick();
+            }
         }
     }
 
