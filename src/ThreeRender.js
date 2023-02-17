@@ -423,6 +423,8 @@ class ThreeRenderManager extends RenderManager {
         }
 
         this.setupRenderer(options);
+        this.refreshStage();
+        this.addIDEListener();
     }
 
     setupRenderer(options) {
@@ -582,17 +584,6 @@ class ThreeRenderManager extends RenderManager {
         } else {
             this.renderer.render(this.scene, this.camera);
         }
-        if (this.isDynaverse) {
-            const ide = window.world.children[0];
-            if (!ide.stage.threeRenderManager) {
-                ide.stage.threeRenderManager = this;
-                ide.stage.inputManager = this.service("InputManager");
-                ide.stage.addAllListeners();
-            }
-            if (!ide.stage.joyStick) {
-                ide.stage.createJoyStick();
-            }
-        }
     }
 
     update() {
@@ -602,6 +593,35 @@ class ThreeRenderManager extends RenderManager {
 
         if (this.xrController && this.avatar) {
             this.xrController.update(this.avatar);
+        }
+
+        if (this.stageChanged) {
+            this.refreshStage();
+            this.stageChanged = false;
+        }
+    }
+
+    refreshStage() {
+        if (this.isDynaverse) {
+            const ide = window.world.children.filter(morph => morph instanceof IDE_Morph)[0];
+            console.log(ide);
+            if (ide) {
+                ide.stage.threeRenderManager = this;
+                ide.stage.inputManager = this.service("InputManager");
+                ide.stage.addAllListeners();
+                if (!ide.stage.joyStick) {
+                    ide.stage.createJoyStick();
+                }
+            }
+        }
+    }
+
+    addIDEListener() {
+        if (this.isDynaverse) {
+            const ide = window.world.children.filter(morph => morph instanceof IDE_Morph)[0];
+            if (ide) {
+                ide.addMessageListener("refreshStage", () => this.stageChanged = true);
+            }
         }
     }
 }
